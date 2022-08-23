@@ -30,3 +30,17 @@
 *.exe
 *.out
 *.app
+
+# Build results
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+_[Ii]ntermediate/
+_[Oo]utput/
+[Dd]ebug/
