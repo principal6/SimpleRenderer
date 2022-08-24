@@ -51,20 +51,14 @@ int main()
 
     Shader vertexShader0;
     vertexShader0.create(renderer, kVertexShader0, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderStreamData);
-    D3D11_INPUT_ELEMENT_DESC inputElementDesc{};
-    inputElementDesc.AlignedByteOffset = 0;
-    inputElementDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-    inputElementDesc.InputSlot = 0;
-    inputElementDesc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-    inputElementDesc.SemanticName = "POSITION";
-    inputElementDesc.SemanticIndex = 0;
-    inputElementDesc.InstanceDataStepRate = 0;
-    vertexShader0._inputElementDescs.push_back(inputElementDesc);
+    InputElement inputElement;
+    inputElement._semanticName = "POSITION";
+    vertexShader0._inputElements.push_back(inputElement);
     vertexShader0.createInputLayout(renderer);
+    renderer.bindShader(vertexShader0);
 
     Shader pixelShader0;
     pixelShader0.create(renderer, kPixelShader0, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderStreamData);
-    renderer.bindShader(vertexShader0);
     renderer.bindShader(pixelShader0);
 
     Resource vertexBuffer;
