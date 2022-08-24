@@ -447,7 +447,7 @@ namespace SimpleRenderer
         if (FAILED(::D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE::D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION,
             &swapChainDescriptor, _swapChain.ReleaseAndGetAddressOf(), _device.ReleaseAndGetAddressOf(), nullptr, _deviceContext.ReleaseAndGetAddressOf())))
         {
-            MINT_LOG_ERROR("SwapChain 생성에 실패했습니다!");
+            MINT_LOG_ERROR("Failed to create Device and SwapChain.");
             return;
         }
 
@@ -455,7 +455,7 @@ namespace SimpleRenderer
         _swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.ReleaseAndGetAddressOf()));
         if (FAILED(_device->CreateRenderTargetView(backBuffer.Get(), nullptr, _backBufferRtv.ReleaseAndGetAddressOf())))
         {
-            MINT_LOG_ERROR("BackBuffer 초기화에 실패했습니다!");
+            MINT_LOG_ERROR("Failed to get BackBuffer.");
             return;
         }
 
@@ -473,12 +473,12 @@ namespace SimpleRenderer
         depthStencilResourceDescriptor.MiscFlags = 0;
         if (FAILED(_device->CreateTexture2D(&depthStencilResourceDescriptor, nullptr, _depthStencilResource.ReleaseAndGetAddressOf())))
         {
-            MINT_LOG_ERROR("DepthStencil 텍스쳐 생성에 실패했습니다.");
+            MINT_LOG_ERROR("Failed to create Depth-Stencil texture.");
             return;
         }
         if (FAILED(_device->CreateDepthStencilView(_depthStencilResource.Get(), nullptr, _depthStencilView.ReleaseAndGetAddressOf())))
         {
-            MINT_LOG_ERROR("DepthStencil 뷰 생성에 실패했습니다.");
+            MINT_LOG_ERROR("Failed to create Depth-Stencil view.");
             return;
         }
 
