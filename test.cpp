@@ -1,4 +1,4 @@
-#include "SimpleRenderer.h"
+﻿#include "SimpleRenderer.h"
 
 const char kStreamData[] =
 R"(
@@ -70,13 +70,10 @@ int main()
     Resource vertexBuffer;
     std::vector<VS_INPUT> vertices;
     {
-        VS_INPUT vertex;
-        vertex._position = float4(-0.5f, 0.5f, 0.0f, 1.0f);
-        vertices.push_back(vertex);
-        vertex._position = float4(+0.5f, 0.5f, 0.0f, 1.0f);
-        vertices.push_back(vertex);
-        vertex._position = float4(0.0f, -0.5f, 0.0f, 1.0f);
-        vertices.push_back(vertex);
+        vertices.resize(3);
+        vertices[0]._position = float4(-0.5f, 0.5f, 0.0f, 1.0f);
+        vertices[1]._position = float4(+0.5f, 0.5f, 0.0f, 1.0f);
+        vertices[2]._position = float4(0.0f, -0.5f, 0.0f, 1.0f);
         vertexBuffer.create(renderer, ResourceType::VertexBuffer, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
     }
     renderer.bindResource(vertexBuffer, 0);
