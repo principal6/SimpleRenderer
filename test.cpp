@@ -1,6 +1,6 @@
 ﻿#include "SimpleRenderer.h"
 
-const char kStreamData[] =
+const char kStreamDataCode[] =
 R"(
     struct VS_INPUT
     {
@@ -12,7 +12,7 @@ R"(
     };
 )";
 
-const char kVertexShader0[] =
+const char kVertexShaderCode0[] =
 R"(
     #include "StreamData"
 
@@ -30,7 +30,7 @@ R"(
     }
 )";
 
-const char kPixelShader0[] =
+const char kPixelShaderCode0[] =
 R"(
     #include "StreamData"
 
@@ -62,20 +62,19 @@ int main()
 
     ShaderHeader shaderHeaderStreamData;
     shaderHeaderStreamData._headerName = "StreamData";
-    shaderHeaderStreamData._headerContent = kStreamData;
+    shaderHeaderStreamData._headerCode = kStreamDataCode;
 
     Shader vertexShader0;
-    vertexShader0.create(renderer, kVertexShader0, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderStreamData);
-    ShaderInputLayout shaderInputLayout;
-    ShaderInputLayout::InputElement shaderInputElement;
-    shaderInputElement._semanticName = "POSITION";
-    shaderInputLayout._inputElements.push_back(shaderInputElement);
-    shaderInputLayout.create(renderer, vertexShader0);
-    renderer.bindShaderInputLayout(shaderInputLayout);
+    vertexShader0.create(renderer, kVertexShaderCode0, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderStreamData);
     renderer.bindShader(vertexShader0);
 
+    ShaderInputLayout shaderInputLayout;
+    shaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat4("POSITION", 0));
+    shaderInputLayout.create(renderer, vertexShader0);
+    renderer.bindShaderInputLayout(shaderInputLayout);
+
     Shader pixelShader0;
-    pixelShader0.create(renderer, kPixelShader0, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderStreamData);
+    pixelShader0.create(renderer, kPixelShaderCode0, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderStreamData);
     renderer.bindShader(pixelShader0);
 
     Resource vscbMatrices;

@@ -119,26 +119,66 @@ namespace SimpleRenderer
 
     public:
         std::string _headerName;
-        std::string _headerContent;
+        std::string _headerCode;
     };
 
     struct ShaderInputLayout
     {
         struct InputElement
         {
-            InputElement() = default;
-            uint32 _byteOffset = 0;
             DXGI_FORMAT _format = DXGI_FORMAT_R32G32B32A32_FLOAT;
             uint32 _inputSlot = 0;
             D3D11_INPUT_CLASSIFICATION _inputSlotClass = D3D11_INPUT_CLASSIFICATION::D3D11_INPUT_PER_VERTEX_DATA;
-            std::string _semanticName;
+            const char* _semanticName = nullptr;
             uint32 _semanticIndex = 0;
             uint32 _instanceStepRate = 0;
         };
 
+        static InputElement createInputElementFloat4(const char* const semanticName, const uint32 semanticIndex) { return __createInputElement_common(DXGI_FORMAT_R32G32B32A32_FLOAT, semanticName, semanticIndex); }
+        static InputElement createInputElementFloat3(const char* const semanticName, const uint32 semanticIndex) { return __createInputElement_common(DXGI_FORMAT_R32G32B32_FLOAT, semanticName, semanticIndex); }
+        static InputElement createInputElementFloat2(const char* const semanticName, const uint32 semanticIndex) { return __createInputElement_common(DXGI_FORMAT_R32G32_FLOAT, semanticName, semanticIndex); }
+        static InputElement createInputElementFloat(const char* const semanticName, const uint32 semanticIndex) { return __createInputElement_common(DXGI_FORMAT_R32_FLOAT, semanticName, semanticIndex); }
+
+        void clearInputElements();
+        void pushInputElement(const InputElement& newInputElement);
+
         bool create(Renderer& renderer, const Shader& vertexShader);
-        std::vector<InputElement> _inputElements;
+
+    private:
+        static InputElement __createInputElement_common(const DXGI_FORMAT format, const char* const semanticName, const uint32 semanticIndex)
+        {
+            InputElement inputElement;
+            inputElement._format = format;
+            inputElement._semanticName = semanticName;
+            inputElement._semanticIndex = semanticIndex;
+            return inputElement;
+        }
+
+        uint32 computeInputElementByteSize(const D3D11_INPUT_ELEMENT_DESC& inputElementDesc)
+        {
+            switch (inputElementDesc.Format)
+            {
+            case DXGI_FORMAT_R32G32B32A32_FLOAT:
+                return 16;
+            case DXGI_FORMAT_R32G32B32_FLOAT:
+                return 12;
+            case DXGI_FORMAT_R32G32_FLOAT:
+                return 8;
+            case DXGI_FORMAT_R32_FLOAT:
+                return 4;
+            default:
+                break;
+            }
+            MINT_LOG_ERROR("!!!");
+            return 0;
+        }
+
+    public:
         ComPtr<ID3D11InputLayout> _inputLayout;
+
+    private:
+        std::vector<D3D11_INPUT_ELEMENT_DESC> _inputElements;
+        uint32 _inputTotalByteSize = 0;
     };
 
     struct Shader
@@ -244,26 +284,41 @@ namespace SimpleRenderer
     HRESULT ShaderHeader::Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes)
     {
         pFileName = _headerName.c_str();
-        *ppData = _headerContent.c_str();
-        *pBytes = static_cast<UINT>(_headerContent.length());
+        *ppData = _headerCode.c_str();
+        *pBytes = static_cast<UINT>(_headerCode.length());
         return S_OK;
+    }
+
+    void ShaderInputLayout::clearInputElements()
+    {
+        _inputElements.clear();
+        _inputTotalByteSize = 0;
+    }
+
+    void ShaderInputLayout::pushInputElement(const InputElement& newInputElement)
+    {
+        D3D11_INPUT_ELEMENT_DESC inputElementDesc;
+        inputElementDesc.AlignedByteOffset = _inputTotalByteSize;
+        inputElementDesc.Format = newInputElement._format;
+        inputElementDesc.InputSlot = newInputElement._inputSlot;
+        inputElementDesc.InputSlotClass = newInputElement._inputSlotClass;
+        inputElementDesc.SemanticName = newInputElement._semanticName;
+        inputElementDesc.SemanticIndex = newInputElement._semanticIndex;
+        inputElementDesc.InstanceDataStepRate = newInputElement._instanceStepRate;
+        _inputElements.push_back(inputElementDesc);
+
+        _inputTotalByteSize += computeInputElementByteSize(inputElementDesc);
     }
 
     bool ShaderInputLayout::create(Renderer& renderer, const Shader& vertexShader)
     {
-        std::vector<D3D11_INPUT_ELEMENT_DESC> inputElementDescs;
-        inputElementDescs.resize(_inputElements.size());
-        for (uint32 index = 0; index < inputElementDescs.size(); ++index)
+        if (_inputElements.empty())
         {
-            inputElementDescs[index].AlignedByteOffset = _inputElements[index]._byteOffset;
-            inputElementDescs[index].Format = _inputElements[index]._format;
-            inputElementDescs[index].InputSlot = _inputElements[index]._inputSlot;
-            inputElementDescs[index].InputSlotClass = _inputElements[index]._inputSlotClass;
-            inputElementDescs[index].SemanticName = _inputElements[index]._semanticName.c_str();
-            inputElementDescs[index].SemanticIndex = _inputElements[index]._semanticIndex;
-            inputElementDescs[index].InstanceDataStepRate = _inputElements[index]._instanceStepRate;
+            MINT_LOG_ERROR("Push input elements before creating ShaderInputLayout!");
+            return false;
         }
-        if (FAILED(renderer.getDevice()->CreateInputLayout(&inputElementDescs[0], static_cast<UINT>(_inputElements.size()),
+
+        if (FAILED(renderer.getDevice()->CreateInputLayout(&_inputElements[0], static_cast<UINT>(_inputElements.size()),
             vertexShader._shaderBlob->GetBufferPointer(), vertexShader._shaderBlob->GetBufferSize(), _inputLayout.ReleaseAndGetAddressOf())))
         {
             MINT_LOG_ERROR("Failed to create ShaderInputLayout");
