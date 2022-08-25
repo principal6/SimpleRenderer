@@ -5,10 +5,12 @@ R"(
     struct VS_INPUT
     {
         float4 position : POSITION0;
+        float4 color : COLOR0;
     };
     struct VS_OUTPUT
     {
         float4 screenPosition : SV_POSITION;
+        float4 color : COLOR0;
     };
 )";
 
@@ -26,6 +28,7 @@ R"(
         VS_OUTPUT output;
         output.screenPosition = mul(input.position, _cbProjectionMatrix);
         output.screenPosition /= output.screenPosition.w;
+        output.color = input.color;
         return output;
     }
 )";
@@ -36,7 +39,7 @@ R"(
 
     float4 main(VS_OUTPUT input) : SV_Target
     {
-        return float4(0, 1, 0, 1);
+        return input.color;
     }
 )";
 
@@ -47,6 +50,7 @@ int main()
     struct alignas(float) VS_INPUT
     {
         float4 _position;
+        float4 _color;
     };
     
     struct CB_MATRICES
@@ -68,6 +72,7 @@ int main()
 
     ShaderInputLayout shaderInputLayout;
     shaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat4("POSITION", 0));
+    shaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat4("COLOR", 0));
     shaderInputLayout.create(renderer, vertexShader0);
     renderer.bindShaderInputLayout(shaderInputLayout);
 
@@ -88,8 +93,11 @@ int main()
     {
         vertices.resize(3);
         vertices[0]._position = float4(0, 0, 0, 1);
+        vertices[0]._color = float4(1, 0, 0, 1);
         vertices[1]._position = float4(400, 0, 0, 1);
+        vertices[1]._color = float4(1, 1, 0, 1);
         vertices[2]._position = float4(400, 300, 0, 1);
+        vertices[2]._color = float4(0, 1, 1, 1);
         vertexBuffer.create(renderer, ResourceType::VertexBuffer, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
     }
     renderer.bindInput(vertexBuffer, 0);
