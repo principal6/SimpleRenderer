@@ -108,7 +108,7 @@ namespace SimpleRenderer
         bool create(Renderer& renderer, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeader* const shaderHeader = nullptr);
         bool createInputLayout(Renderer& renderer);
 
-        ShaderType _type;
+        ShaderType _type = ShaderType::VertexShader;
         std::vector<InputElement> _inputElements;
         ComPtr<ID3D11InputLayout> _inputLayout;
 
@@ -483,7 +483,7 @@ namespace SimpleRenderer
             return;
         }
 
-        D3D11_TEXTURE2D_DESC depthStencilResourceDescriptor;
+        D3D11_TEXTURE2D_DESC depthStencilResourceDescriptor{};
         depthStencilResourceDescriptor.Width = static_cast<UINT>(_windowSize.x);
         depthStencilResourceDescriptor.Height = static_cast<UINT>(_windowSize.y);
         depthStencilResourceDescriptor.MipLevels = 1;
