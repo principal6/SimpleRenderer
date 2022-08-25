@@ -66,10 +66,12 @@ int main()
 
     Shader vertexShader0;
     vertexShader0.create(renderer, kVertexShader0, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderStreamData);
-    InputElement inputElement;
-    inputElement._semanticName = "POSITION";
-    vertexShader0._inputElements.push_back(inputElement);
-    vertexShader0.createInputLayout(renderer);
+    ShaderInputLayout shaderInputLayout;
+    ShaderInputLayout::InputElement shaderInputElement;
+    shaderInputElement._semanticName = "POSITION";
+    shaderInputLayout._inputElements.push_back(shaderInputElement);
+    shaderInputLayout.create(renderer, vertexShader0);
+    renderer.bindShaderInputLayout(shaderInputLayout);
     renderer.bindShader(vertexShader0);
 
     Shader pixelShader0;
