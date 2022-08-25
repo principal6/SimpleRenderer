@@ -79,6 +79,7 @@ int main()
 
     Resource vscbMatrices;
     vscbMatrices.create(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
+    renderer.bindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
 
     Resource vertexBuffer;
     std::vector<VS_INPUT> vertices;
@@ -89,8 +90,7 @@ int main()
         vertices[2]._position = float4(400, 300, 0, 1);
         vertexBuffer.create(renderer, ResourceType::VertexBuffer, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
     }
-    renderer.bindResource(vertexBuffer, 0);
-    renderer.bindResource(ShaderType::VertexShader, vscbMatrices, 0);
+    renderer.bindInput(vertexBuffer, 0);
 
     while (renderer.isRunning())
     {

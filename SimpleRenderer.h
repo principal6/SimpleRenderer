@@ -222,38 +222,23 @@ namespace SimpleRenderer
     class Renderer final
     {
     public:
-        Renderer(const float2& windowSize, const Color& clearColor) : _hInstance{ nullptr }, _hWnd{ nullptr }, _windowSize{ windowSize }, _clearColor{ clearColor } { if (createWindow()) createDevice(); }
+        Renderer(const float2& windowSize, const Color& clearColor) : _windowSize{ windowSize }, _clearColor{ clearColor } { if (createWindow()) createDevice(); }
         ~Renderer() { destroyWindow(); }
 
     public:
         bool isRunning();
-        bool beginRendering();
-        void endRendering();
-        void draw(const uint32 vertexCount)
-        {
-            _deviceContext->Draw(vertexCount, 0);
-        }
 
     public:
-        void bindShaderInputLayout(ShaderInputLayout& shaderInputLayout)
-        {
-            if (shaderInputLayout._inputLayout.Get() != nullptr)
-                _deviceContext->IASetInputLayout(shaderInputLayout._inputLayout.Get());
-        }
-        void bindShader(Shader& shader)
-        {
-            if (shader._type == ShaderType::VertexShader)
-            {
-                _deviceContext->VSSetShader(static_cast<ID3D11VertexShader*>(shader._shader.Get()), nullptr, 0);
-            }
-            else if (shader._type == ShaderType::PixelShader)
-            {
-                _deviceContext->PSSetShader(static_cast<ID3D11PixelShader*>(shader._shader.Get()), nullptr, 0);
-            }
-        }
-        void bindResource(Resource& resource, const uint32 slot);
-        void bindResource(const ShaderType shaderType, Resource& resource, const uint32 slot);
+        void bindShaderInputLayout(ShaderInputLayout& shaderInputLayout);
+        void bindShader(Shader& shader);
+        void bindInput(Resource& resource, const uint32 slot);
+        void bindShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot);
         void useTrianglePrimitive();
+
+    public:
+        bool beginRendering();
+        void draw(const uint32 vertexCount);
+        void endRendering();
 
     public:
         ID3D11Device* getDevice() const { return _device.Get(); }
@@ -265,8 +250,8 @@ namespace SimpleRenderer
         void createDevice();
 
     private:
-        HINSTANCE _hInstance;
-        HWND _hWnd;
+        HINSTANCE _hInstance = nullptr;
+        HWND _hWnd = nullptr;
         float2 _windowSize;
         Color _clearColor;
 
@@ -277,6 +262,12 @@ namespace SimpleRenderer
         ComPtr<ID3D11RenderTargetView> _backBufferRtv;
         ComPtr<ID3D11Texture2D> _depthStencilResource;
         ComPtr<ID3D11DepthStencilView> _depthStencilView;
+
+    private:
+        bool _is_InputLayout_bound = false;
+        bool _is_VS_bound = false;
+        bool _is_PS_bound = false;
+        bool _is_VertexBuffer_bound = false;
     };
 
 
@@ -483,20 +474,50 @@ namespace SimpleRenderer
         return true;
     }
 
-    bool Renderer::beginRendering()
+    void Renderer::bindShaderInputLayout(ShaderInputLayout& shaderInputLayout)
     {
-        _deviceContext->ClearRenderTargetView(_backBufferRtv.Get(), _clearColor.f);
-        _deviceContext->ClearDepthStencilView(_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-        useTrianglePrimitive();
-        return true;
+        _is_InputLayout_bound = true;
+
+        if (shaderInputLayout._inputLayout.Get() != nullptr)
+            _deviceContext->IASetInputLayout(shaderInputLayout._inputLayout.Get());
     }
 
-    void Renderer::endRendering()
+    void Renderer::bindShader(Shader& shader)
     {
-        _swapChain->Present(0, 0);
+        if (shader._type == ShaderType::VertexShader)
+        {
+            _is_VS_bound = true;
+            _deviceContext->VSSetShader(static_cast<ID3D11VertexShader*>(shader._shader.Get()), nullptr, 0);
+        }
+        else if (shader._type == ShaderType::PixelShader)
+        {
+            _is_PS_bound = true;
+            _deviceContext->PSSetShader(static_cast<ID3D11PixelShader*>(shader._shader.Get()), nullptr, 0);
+        }
     }
 
-    void Renderer::bindResource(const ShaderType shaderType, Resource& resource, const uint32 slot)
+    void Renderer::bindInput(Resource& resource, const uint32 slot)
+    {
+        if (resource._type == ResourceType::VertexBuffer)
+        {
+            _is_VertexBuffer_bound = true;
+
+            ID3D11Buffer* buffers[1]{ static_cast<ID3D11Buffer*>(resource.getResource()) };
+            uint32 strides[1]{ resource._elementStride };
+            uint32 offsets[1]{ 0 };
+            _deviceContext->IASetVertexBuffers(slot, 1, buffers, strides, offsets);
+        }
+        else if (resource._type == ResourceType::IndexBuffer)
+        {
+            _deviceContext->IASetIndexBuffer(static_cast<ID3D11Buffer*>(resource.getResource()), Resource::kIndexBufferFormat, 0);
+        }
+        else
+        {
+            MINT_LOG_ERROR("!!!");
+        }
+    }
+
+    void Renderer::bindShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot)
     {
         if (resource._type == ResourceType::ConstantBuffer)
         {
@@ -519,28 +540,45 @@ namespace SimpleRenderer
             MINT_LOG_ERROR("!!!");
         }
     }
-    void Renderer::bindResource(Resource& resource, const uint32 slot)
-    {
-        if (resource._type == ResourceType::VertexBuffer)
-        {
-            ID3D11Buffer* buffers[1]{ static_cast<ID3D11Buffer*>(resource.getResource()) };
-            uint32 strides[1]{ resource._elementStride };
-            uint32 offsets[1]{ 0 };
-            _deviceContext->IASetVertexBuffers(slot, 1, buffers, strides, offsets);
-        }
-        else if (resource._type == ResourceType::IndexBuffer)
-        {
-            _deviceContext->IASetIndexBuffer(static_cast<ID3D11Buffer*>(resource.getResource()), Resource::kIndexBufferFormat, 0);
-        }
-        else
-        {
-            MINT_LOG_ERROR("!!!");
-        }
-    }
 
     void Renderer::useTrianglePrimitive()
     {
         _deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    }
+
+    bool Renderer::beginRendering()
+    {
+        if (_is_InputLayout_bound == false)
+        {
+            MINT_LOG_ERROR("You must bind ShaderInputLayout first!");
+            return false;
+        }
+        if (_is_VS_bound == false || _is_PS_bound == false)
+        {
+            MINT_LOG_ERROR("You must at least bind VertexShader and PixelShader first!");
+            return false;
+        }
+
+        _deviceContext->ClearRenderTargetView(_backBufferRtv.Get(), _clearColor.f);
+        _deviceContext->ClearDepthStencilView(_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+        useTrianglePrimitive();
+        return true;
+    }
+
+    void Renderer::draw(const uint32 vertexCount)
+    {
+        if (_is_VertexBuffer_bound == false)
+        {
+            MINT_LOG_ERROR("You must bind VertexBuffer first!");
+            return;
+        }
+
+        _deviceContext->Draw(vertexCount, 0);
+    }
+
+    void Renderer::endRendering()
+    {
+        _swapChain->Present(0, 0);
     }
 
     bool Renderer::createWindow()
