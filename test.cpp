@@ -89,24 +89,26 @@ int main()
     renderer.bindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
 
     Resource vertexBuffer;
+    Resource indexBuffer;
     std::vector<VS_INPUT> vertices;
+    std::vector<uint32> indices;
     {
-        vertices.resize(3);
-        vertices[0]._position = float4(0, 0, 0, 1);
+        MeshGenerator::generate2D_rectangle(float2(200, 150), float2(400, 300), vertices, indices);
         vertices[0]._color = float4(1, 0, 0, 1);
-        vertices[1]._position = float4(400, 0, 0, 1);
         vertices[1]._color = float4(1, 1, 0, 1);
-        vertices[2]._position = float4(400, 300, 0, 1);
         vertices[2]._color = float4(0, 1, 1, 1);
+        vertices[3]._color = float4(1, 0, 1, 1);
         vertexBuffer.create(renderer, ResourceType::VertexBuffer, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
+        indexBuffer.create(renderer, ResourceType::IndexBuffer, &indices[0], sizeof(uint32), (uint32)indices.size());
     }
     renderer.bindInput(vertexBuffer, 0);
+    renderer.bindInput(indexBuffer, 0);
 
     while (renderer.isRunning())
     {
         if (renderer.beginRendering())
         {
-            renderer.draw((uint32)vertices.size());
+            renderer.drawIndexed((uint32)indices.size());
             renderer.endRendering();
         }
     }

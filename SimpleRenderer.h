@@ -39,6 +39,8 @@ namespace SimpleRenderer
         constexpr float2(float x_, float y_) : x{ x_ }, y{ y_ } { __noop; }
         float& operator[](const uint32 index) { return f[index]; }
         const float& operator[](const uint32 index) const { return f[index]; }
+        float2 operator*(const float s) const { return float2(x * s, y * s); }
+        float2 operator/(const float s) const { return float2(x / s, y / s); }
         union { struct { float x; float y; }; float f[2]; };
     };
     struct float4
@@ -195,7 +197,8 @@ namespace SimpleRenderer
     class Resource
     {
     public:
-        static constexpr DXGI_FORMAT kIndexBufferFormat = DXGI_FORMAT::DXGI_FORMAT_R16_UINT;
+        //static constexpr DXGI_FORMAT kIndexBufferFormat = DXGI_FORMAT::DXGI_FORMAT_R16_UINT;
+        static constexpr DXGI_FORMAT kIndexBufferFormat = DXGI_FORMAT::DXGI_FORMAT_R32_UINT;
 
     public:
         Resource() : _type{ ResourceType::VertexBuffer }, _byteSize{ 0 }, _elementStride{ 0 }, _elementMaxCount{ 0 } { __noop; }
@@ -219,6 +222,32 @@ namespace SimpleRenderer
         ComPtr<ID3D11View> _view; // Only used for Texture and StructuredBuffer
     };
 
+    class MeshGenerator
+    {
+    public:
+        template<typename Vertex>
+        static void generate2D_rectangle(const float2& centerPosition, const float2& size, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+        {
+            vertices.clear();
+            vertices.resize(4);
+
+            const float2& halfSize = size * 0.5f;
+            vertices[0]._position = float4(centerPosition.x - halfSize.x, centerPosition.y - halfSize.y, 0, 1);
+            vertices[1]._position = float4(centerPosition.x + halfSize.x, centerPosition.y - halfSize.y, 0, 1);
+            vertices[2]._position = float4(centerPosition.x - halfSize.x, centerPosition.y + halfSize.y, 0, 1);
+            vertices[3]._position = float4(centerPosition.x + halfSize.x, centerPosition.y + halfSize.y, 0, 1);
+
+            indices.clear();
+            indices.push_back(0);
+            indices.push_back(1);
+            indices.push_back(2);
+
+            indices.push_back(1);
+            indices.push_back(3);
+            indices.push_back(2);
+        }
+    };
+
     class Renderer final
     {
     public:
@@ -238,6 +267,7 @@ namespace SimpleRenderer
     public:
         bool beginRendering();
         void draw(const uint32 vertexCount);
+        void drawIndexed(const uint32 indexCount);
         void endRendering();
 
     public:
@@ -268,6 +298,7 @@ namespace SimpleRenderer
         bool _is_VS_bound = false;
         bool _is_PS_bound = false;
         bool _is_VertexBuffer_bound = false;
+        bool _is_IndexBuffer_bound = false;
     };
 
 
@@ -509,6 +540,8 @@ namespace SimpleRenderer
         }
         else if (resource._type == ResourceType::IndexBuffer)
         {
+            _is_IndexBuffer_bound = true;
+
             _deviceContext->IASetIndexBuffer(static_cast<ID3D11Buffer*>(resource.getResource()), Resource::kIndexBufferFormat, 0);
         }
         else
@@ -565,6 +598,21 @@ namespace SimpleRenderer
         return true;
     }
 
+    void Renderer::drawIndexed(const uint32 indexCount)
+    {
+        if (_is_VertexBuffer_bound == false)
+        {
+            MINT_LOG_ERROR("You must bind VertexBuffer first!");
+            return;
+        }
+        if (_is_IndexBuffer_bound == false)
+        {
+            MINT_LOG_ERROR("You must bind IndexBuffer first!");
+            return;
+        }
+
+        _deviceContext->DrawIndexed(indexCount, 0, 0);
+    }
     void Renderer::draw(const uint32 vertexCount)
     {
         if (_is_VertexBuffer_bound == false)
