@@ -35,16 +35,16 @@ namespace SimpleRenderer
 
     struct float2
     {
-        float2() : float2(0, 0) { __noop; }
-        float2(float x_, float y_) : x{ x_ }, y{ y_ } { __noop; }
+        constexpr float2() : float2(0, 0) { __noop; }
+        constexpr float2(float x_, float y_) : x{ x_ }, y{ y_ } { __noop; }
         float& operator[](const uint32 index) { return f[index]; }
         const float& operator[](const uint32 index) const { return f[index]; }
         union { struct { float x; float y; }; float f[2]; };
     };
     struct float4
     {
-        float4() : float4(0, 0, 0, 0) { __noop; }
-        float4(float x_, float y_, float z_, float w_) : x{ x_ }, y{ y_ }, z{ z_ }, w{ w_ } { __noop; }
+        constexpr float4() : float4(0, 0, 0, 0) { __noop; }
+        constexpr float4(float x_, float y_, float z_, float w_) : x{ x_ }, y{ y_ }, z{ z_ }, w{ w_ } { __noop; }
         float& operator[](const uint32 index) { return f[index]; }
         const float& operator[](const uint32 index) const { return f[index]; }
         float4 operator+() const { return *this; }
@@ -57,10 +57,39 @@ namespace SimpleRenderer
         float4& operator-=(const float4& rhs) { *this = (*this - rhs); return *this; }
         float4& operator*=(const float s) { *this = (*this * s); return *this; }
         float4& operator/=(const float s) { *this = (*this / s); return *this; }
-        float dot(const float4& rhs) const { return x * rhs.x + y * rhs.y + z * rhs.z + w * rhs.w; }
-        float lengthSq() const { return dot(*this); }
+        constexpr float dot(const float4& rhs) const { return x * rhs.x + y * rhs.y + z * rhs.z + w * rhs.w; }
+        constexpr float lengthSq() const { return dot(*this); }
         float length() const { return ::sqrt(lengthSq()); }
         union { struct { float x; float y; float z; float w; }; float f[4]; };
+    };
+    struct float4x4
+    {
+        constexpr float4x4() : float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) { __noop; }
+        constexpr float4x4(const float4(&rows)[4]) : _rows{ rows[0], rows[1], rows[2], rows[3] } { __noop; }
+        constexpr float4x4(float _11_, float _12_, float _13_, float _14_, float _21_, float _22_, float _23_, float _24_, float _31_, float _32_, float _33_, float _34_, float _41_, float _42_, float _43_, float _44_) : _m{ _11_, _12_, _13_, _14_, _21_, _22_, _23_, _24_, _31_, _32_, _33_, _34_, _41_, _42_, _43_, _44_ } { __noop; }
+        constexpr float4x4(const float(&m)[16]) : _m{ m[0],m[1],m[2],m[3],m[4],m[5],m[6],m[7],m[8],m[9],m[10],m[11],m[12],m[13],m[14],m[15] } { __noop; }
+        void set(float _11_, float _12_, float _13_, float _14_, float _21_, float _22_, float _23_, float _24_, float _31_, float _32_, float _33_, float _34_, float _41_, float _42_, float _43_, float _44_)
+        {
+            _11 = _11_; _12 = _12_; _13 = _13_; _14 = _14_; _21 = _11_; _22 = _12_; _23 = _13_; _24 = _14_; _31 = _11_; _32 = _12_; _33 = _13_; _34 = _14_; _41 = _11_; _42 = _12_; _43 = _13_; _44 = _14_;
+        }
+        union {
+            float _m[16]; float4 _rows[4];
+            struct {
+                float _11; float _12; float _13; float _14;
+                float _21; float _22; float _23; float _24;
+                float _31; float _32; float _33; float _34;
+                float _41; float _42; float _43; float _44;
+            };
+        };
+        void makeIdentity()
+        {
+            _11 = 1; _12 = 0; _13 = 0; _14 = 0; _21 = 0; _22 = 1; _23 = 0; _24 = 0; _31 = 0; _32 = 0; _33 = 1; _34 = 0; _41 = 0; _42 = 0; _43 = 0; _44 = 1;
+        }
+        void makePixelCoordinatesProjectionMatrix(const float2& screenSize)
+        {
+            makeIdentity();
+            _11 = 2.0f / screenSize.x; _14 = -1.0f; _22 = -2.0f / screenSize.y; _24 = 1.0f;
+        }
     };
     using Color = float4;
 
@@ -176,6 +205,7 @@ namespace SimpleRenderer
             }
         }
         void bindResource(Resource& resource, const uint32 slot);
+        void bindResource(const ShaderType shaderType, Resource& resource, const uint32 slot);
         void useTrianglePrimitive();
 
     public:
@@ -403,6 +433,29 @@ namespace SimpleRenderer
         _swapChain->Present(0, 0);
     }
 
+    void Renderer::bindResource(const ShaderType shaderType, Resource& resource, const uint32 slot)
+    {
+        if (resource._type == ResourceType::ConstantBuffer)
+        {
+            ID3D11Buffer* buffers[1]{ static_cast<ID3D11Buffer*>(resource.getResource()) };
+            if (shaderType == ShaderType::VertexShader)
+            {
+                _deviceContext->VSSetConstantBuffers(slot, 1, buffers);
+            }
+            else if (shaderType == ShaderType::PixelShader)
+            {
+                _deviceContext->PSSetConstantBuffers(slot, 1, buffers);
+            }
+            else
+            {
+                MINT_LOG_ERROR("!!!");
+            }
+        }
+        else
+        {
+            MINT_LOG_ERROR("!!!");
+        }
+    }
     void Renderer::bindResource(Resource& resource, const uint32 slot)
     {
         if (resource._type == ResourceType::VertexBuffer)
