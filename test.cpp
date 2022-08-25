@@ -56,10 +56,8 @@ int main()
 
     constexpr float2 kScreenSize = float2(800, 600);
     
-    CB_MATRICES cb_matrices;
-    cb_matrices._projectionMatrix.makePixelCoordinatesProjectionMatrix(kScreenSize);
     Renderer renderer{ Renderer(kScreenSize, Color(0, 0.5f, 1, 1)) };
-
+    
     ShaderHeader shaderHeaderStreamData;
     shaderHeaderStreamData._headerName = "StreamData";
     shaderHeaderStreamData._headerCode = kStreamDataCode;
@@ -78,7 +76,11 @@ int main()
     renderer.bindShader(pixelShader0);
 
     Resource vscbMatrices;
-    vscbMatrices.create(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
+    {
+        CB_MATRICES cb_matrices;
+        cb_matrices._projectionMatrix.makePixelCoordinatesProjectionMatrix(kScreenSize);
+        vscbMatrices.create(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
+    }
     renderer.bindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
 
     Resource vertexBuffer;
