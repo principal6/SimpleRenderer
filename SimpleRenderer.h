@@ -33,14 +33,22 @@ namespace SimpleRenderer
     struct Shader;
 #pragma endregion
 
+    constexpr float kPi = 3.14159265f;
+    constexpr float k2Pi = kPi * 2.0f;
+
     struct float2
     {
         constexpr float2() : float2(0, 0) { __noop; }
         constexpr float2(float x_, float y_) : x{ x_ }, y{ y_ } { __noop; }
         float& operator[](const uint32 index) { return f[index]; }
         const float& operator[](const uint32 index) const { return f[index]; }
+        float2 operator+(const float2& rhs) const { return float2(x + rhs.x, y + rhs.y); }
+        float2 operator-(const float2& rhs) const { return float2(x - rhs.x, y - rhs.y); }
         float2 operator*(const float s) const { return float2(x * s, y * s); }
         float2 operator/(const float s) const { return float2(x / s, y / s); }
+        constexpr float dot(const float2& rhs) const { return x * rhs.x + y * rhs.y; }
+        constexpr float lengthSq() const { return dot(*this); }
+        float length() const { return ::sqrt(lengthSq()); }
         union { struct { float x; float y; }; float f[2]; };
     };
     struct float4
@@ -62,6 +70,7 @@ namespace SimpleRenderer
         constexpr float dot(const float4& rhs) const { return x * rhs.x + y * rhs.y + z * rhs.z + w * rhs.w; }
         constexpr float lengthSq() const { return dot(*this); }
         float length() const { return ::sqrt(lengthSq()); }
+        void setPoint(const float2& position) { x = position.x; y = position.y; z = 0; w = 1; }
         union { struct { float x; float y; float z; float w; }; float f[4]; };
     };
     struct float4x4
@@ -222,29 +231,108 @@ namespace SimpleRenderer
         ComPtr<ID3D11View> _view; // Only used for Texture and StructuredBuffer
     };
 
+    template<typename Vertex>
     class MeshGenerator
     {
     public:
-        template<typename Vertex>
-        static void generate2D_rectangle(const float2& centerPosition, const float2& size, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+        static void push_2D_triangle(const float2& a, const float2& b, const float2& c, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
         {
-            vertices.clear();
-            vertices.resize(4);
+            const uint64 vertexBase = vertices.size();
+            vertices.resize(vertexBase + 3);
+
+            const uint64 indexBase = indices.size();
+            indices.reserve(indexBase + 3);
+
+            vertices[vertexBase + 0]._position = float4(a.x, a.y, 0, 1);
+            vertices[vertexBase + 1]._position = float4(b.x, b.y, 0, 1);
+            vertices[vertexBase + 2]._position = float4(c.x, c.y, 0, 1);
+            
+            pushIndex(indices, vertexBase + 0);
+            pushIndex(indices, vertexBase + 1);
+            pushIndex(indices, vertexBase + 2);
+        }
+
+        static void push_2D_rectangle(const float2& centerPosition, const float2& size, const float rotationAngle, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+        {
+            const uint64 vertexBase = vertices.size();
+            vertices.resize(vertexBase + 4);
+
+            const uint64 indexBase = indices.size();
+            indices.reserve(indexBase + 6);
 
             const float2& halfSize = size * 0.5f;
-            vertices[0]._position = float4(centerPosition.x - halfSize.x, centerPosition.y - halfSize.y, 0, 1);
-            vertices[1]._position = float4(centerPosition.x + halfSize.x, centerPosition.y - halfSize.y, 0, 1);
-            vertices[2]._position = float4(centerPosition.x - halfSize.x, centerPosition.y + halfSize.y, 0, 1);
-            vertices[3]._position = float4(centerPosition.x + halfSize.x, centerPosition.y + halfSize.y, 0, 1);
+            const float cosTheta = ::cos(rotationAngle);
+            const float sinTheta = ::sin(rotationAngle);
+            const float2 rotatedX = float2( cosTheta, sinTheta);
+            const float2 rotatedY = float2(-sinTheta, cosTheta);
+            vertices[vertexBase + 0]._position.setPoint(centerPosition - rotatedX * halfSize.x - rotatedY * halfSize.y);
+            vertices[vertexBase + 1]._position.setPoint(centerPosition + rotatedX * halfSize.x - rotatedY * halfSize.y);
+            vertices[vertexBase + 2]._position.setPoint(centerPosition - rotatedX * halfSize.x + rotatedY * halfSize.y);
+            vertices[vertexBase + 3]._position.setPoint(centerPosition + rotatedX * halfSize.x + rotatedY * halfSize.y);
 
-            indices.clear();
-            indices.push_back(0);
-            indices.push_back(1);
-            indices.push_back(2);
+            pushIndex(indices, vertexBase + 0);
+            pushIndex(indices, vertexBase + 1);
+            pushIndex(indices, vertexBase + 2);
 
-            indices.push_back(1);
-            indices.push_back(3);
-            indices.push_back(2);
+            pushIndex(indices, vertexBase + 1);
+            pushIndex(indices, vertexBase + 3);
+            pushIndex(indices, vertexBase + 2);
+        }
+
+        static void push_2D_circle(const float2& centerPosition, float radius, uint32 sideCount, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+        {
+            radius = max(radius, 1.0f);
+            sideCount = max(sideCount, 4);
+
+            const uint64 vertexBase = vertices.size();
+            vertices.resize(vertexBase + sideCount + 1);
+            const uint64 indexBase = indices.size();
+            indices.reserve(indexBase + static_cast<uint64>(sideCount) * 3);
+
+            vertices[vertexBase]._position = float4(centerPosition.x, centerPosition.y, 0, 1);
+            for (uint32 sideIndex = 0; sideIndex < sideCount; ++sideIndex)
+            {
+                const float theta = (k2Pi * sideIndex) / sideCount;
+                const float x = radius * ::cos(theta);
+                const float y = -radius * ::sin(theta);
+                vertices[vertexBase + sideIndex + 1]._position = float4(centerPosition.x + x, centerPosition.y + y, 0, 1);
+                
+                pushIndex(indices, vertexBase + 0);
+                pushIndex(indices, vertexBase + sideIndex + 2);
+                pushIndex(indices, vertexBase + sideIndex + 1);
+            }
+            indices[indices.size() - 2] = static_cast<uint32>(vertexBase + 1);
+        }
+
+        static void push_2D_lineSegment(const float2& a, const float2& b, float thickness, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+        {
+            thickness = max(thickness, 1.0f);
+
+            const float2 ab = b - a;
+            const float l = ab.length();
+            if (l == 0.0f)
+            {
+                return;
+            }
+
+            const float2 direction = ab / l;
+            const float rotationAngle = ::atan2f(direction.y, direction.x);
+            const float2 m = (a + b) * 0.5f;
+            push_2D_rectangle(m, float2(l, thickness), rotationAngle, vertices, indices);
+        }
+
+        static void fillVertexColor(std::vector<Vertex>& vertices, const Color& color)
+        {
+            for (auto& vertex : vertices)
+            {
+                vertex._color = color;
+            }
+        }
+
+    private:
+        static void pushIndex(std::vector<uint32>& indices, const uint64 index)
+        {
+            indices.push_back(static_cast<uint32>(index));
         }
     };
 
@@ -319,7 +407,7 @@ namespace SimpleRenderer
 
     void ShaderInputLayout::pushInputElement(const InputElement& newInputElement)
     {
-        D3D11_INPUT_ELEMENT_DESC inputElementDesc;
+        D3D11_INPUT_ELEMENT_DESC inputElementDesc{};
         inputElementDesc.AlignedByteOffset = _inputTotalByteSize;
         inputElementDesc.Format = newInputElement._format;
         inputElementDesc.InputSlot = newInputElement._inputSlot;
