@@ -393,7 +393,8 @@ namespace SimpleRenderer
         ComPtr<ID3D11RenderTargetView> _backBufferRtv;
         ComPtr<ID3D11Texture2D> _depthStencilResource;
         ComPtr<ID3D11DepthStencilView> _depthStencilView;
-        ComPtr<ID3D11BlendState> _blendState;
+        ComPtr<ID3D11SamplerState> _defaultSamplerState;
+        ComPtr<ID3D11BlendState> _defaultBlendState;
 
     private:
         bool _is_InputLayout_bound = false;
@@ -914,6 +915,20 @@ namespace SimpleRenderer
         }
 
         {
+            D3D11_SAMPLER_DESC samplerDescriptor{};
+            samplerDescriptor.Filter = D3D11_FILTER::D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+            samplerDescriptor.AddressU = D3D11_TEXTURE_ADDRESS_MODE::D3D11_TEXTURE_ADDRESS_CLAMP;
+            samplerDescriptor.AddressV = D3D11_TEXTURE_ADDRESS_MODE::D3D11_TEXTURE_ADDRESS_CLAMP;
+            samplerDescriptor.AddressW = D3D11_TEXTURE_ADDRESS_MODE::D3D11_TEXTURE_ADDRESS_CLAMP;
+            samplerDescriptor.MipLODBias = 0.0f;
+            samplerDescriptor.ComparisonFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_ALWAYS;
+            samplerDescriptor.MinLOD = 0.0f;
+            samplerDescriptor.MaxLOD = 0.0f;
+            _device->CreateSamplerState(&samplerDescriptor, _defaultSamplerState.ReleaseAndGetAddressOf());
+            _deviceContext->PSSetSamplers(0, 1, _defaultSamplerState.GetAddressOf());
+        }
+
+        {
             D3D11_BLEND_DESC blendDescriptor{};
             blendDescriptor.AlphaToCoverageEnable = false;
             blendDescriptor.RenderTarget[0].BlendEnable = true;
@@ -924,10 +939,10 @@ namespace SimpleRenderer
             blendDescriptor.RenderTarget[0].DestBlendAlpha = D3D11_BLEND::D3D11_BLEND_ZERO;
             blendDescriptor.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP::D3D11_BLEND_OP_ADD;
             blendDescriptor.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE::D3D11_COLOR_WRITE_ENABLE_ALL;
-            _device->CreateBlendState(&blendDescriptor, _blendState.ReleaseAndGetAddressOf());
+            _device->CreateBlendState(&blendDescriptor, _defaultBlendState.ReleaseAndGetAddressOf());
 
             const float kBlendFactor[4]{ 0, 0, 0, 0 };
-            _deviceContext->OMSetBlendState(_blendState.Get(), kBlendFactor, 0xFFFFFFFF);
+            _deviceContext->OMSetBlendState(_defaultBlendState.Get(), kBlendFactor, 0xFFFFFFFF);
         }
 
         _deviceContext->OMSetRenderTargets(1, _backBufferRtv.GetAddressOf(), _depthStencilView.Get());
@@ -945,13 +960,13 @@ namespace SimpleRenderer
     static constexpr const byte kFontTextureRawBitData[kFontTextureByteCount / 8]
     {
         0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
-        0b00000000, 0b00010000, 0b00101000, 0b00010010, 0b00010000, 0b00000000, 0b00000000, 0b00010000, 0b00001000, 0b00100000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000010,
+        0b00000000, 0b00010000, 0b00101000, 0b00100100, 0b00010000, 0b00000000, 0b00000000, 0b00010000, 0b00001000, 0b00100000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000010,
         0b00000000, 0b00010000, 0b00101000, 0b00100100, 0b00111100, 0b01100010, 0b00110000, 0b00010000, 0b00010000, 0b00010000, 0b01000100, 0b00010000, 0b00000000, 0b00000000, 0b00000000, 0b00000100,
-        0b00000000, 0b00010000, 0b00000000, 0b01111110, 0b01010000, 0b10100100, 0b01001000, 0b00000000, 0b00100000, 0b00001000, 0b00101000, 0b00010000, 0b00000000, 0b00000000, 0b00000000, 0b00001000,
+        0b00000000, 0b00010000, 0b00000000, 0b01111110, 0b01010000, 0b10010100, 0b01001000, 0b00000000, 0b00100000, 0b00001000, 0b00101000, 0b00010000, 0b00000000, 0b00000000, 0b00000000, 0b00001000,
         0b00000000, 0b00010000, 0b00000000, 0b00100100, 0b00111100, 0b01101000, 0b00110010, 0b00000000, 0b00100000, 0b00001000, 0b11111110, 0b11111110, 0b00000000, 0b11111110, 0b00000000, 0b00010000,
         0b00000000, 0b00010000, 0b00000000, 0b01111110, 0b00010100, 0b00010110, 0b01001100, 0b00000000, 0b00100000, 0b00001000, 0b00101000, 0b00010000, 0b00000000, 0b00000000, 0b00000000, 0b00100000,
         0b00000000, 0b00000000, 0b00000000, 0b00100100, 0b01111000, 0b00101010, 0b10001100, 0b00000000, 0b00010000, 0b00010000, 0b01000100, 0b00010000, 0b00001000, 0b00000000, 0b00011000, 0b01000000,
-        0b00000000, 0b00010000, 0b00000000, 0b01001000, 0b00010000, 0b01001100, 0b01110010, 0b00000000, 0b00001000, 0b00100000, 0b00000000, 0b00000000, 0b00010000, 0b00000000, 0b00000000, 0b10000000,
+        0b00000000, 0b00010000, 0b00000000, 0b00100100, 0b00010000, 0b01000110, 0b01110010, 0b00000000, 0b00001000, 0b00100000, 0b00000000, 0b00000000, 0b00010000, 0b00000000, 0b00000000, 0b10000000,
         0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
         0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
         0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
