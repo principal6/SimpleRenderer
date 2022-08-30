@@ -109,13 +109,18 @@ namespace SimpleRenderer
         VertexShader,
         PixelShader,
     };
+    enum class TextureFormat
+    {
+        R8_UNORM,
+        R8G8B8A8_UNORM,
+    };
     enum class ResourceType
     {
         VertexBuffer,
         IndexBuffer,
         ConstantBuffer,
         //StructuredBuffer,
-        //Teture2D,
+        Teture2D,
     };
 
     struct ShaderHeader : public ID3DInclude
@@ -210,21 +215,28 @@ namespace SimpleRenderer
         static constexpr DXGI_FORMAT kIndexBufferFormat = DXGI_FORMAT::DXGI_FORMAT_R32_UINT;
 
     public:
-        Resource() : _type{ ResourceType::VertexBuffer }, _byteSize{ 0 }, _elementStride{ 0 }, _elementMaxCount{ 0 } { __noop; }
+        Resource() : _type{ ResourceType::VertexBuffer }, _format{ TextureFormat::R8G8B8A8_UNORM }, _byteSize{ 0 }, _elementStride{ 0 }, _elementMaxCount{ 0 }, _width{ 0 } { __noop; }
         ~Resource() = default;
 
     public:
-        bool create(Renderer& renderer, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount);
+        bool createTexture2D(Renderer& renderer, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height);
+        bool createBuffer(Renderer& renderer, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount);
         bool update(Renderer& renderer, const void* const content, const uint32 elementStride, const uint32 elementCount);
+
+    private:
+        static DXGI_FORMAT __convert_to_DXGI_FORMAT(const TextureFormat& format);
+        static uint32 __computeElementStride(const TextureFormat& format);
 
     public:
         ID3D11Resource* getResource() const { return _resource.Get(); }
 
     public:
         ResourceType _type;
+        TextureFormat _format;
         uint32 _byteSize;
         uint32 _elementStride;
         uint32 _elementMaxCount;
+        uint32 _width;
 
     private:
         ComPtr<ID3D11Resource> _resource;
@@ -246,7 +258,7 @@ namespace SimpleRenderer
             vertices[vertexBase + 0]._position = float4(a.x, a.y, 0, 1);
             vertices[vertexBase + 1]._position = float4(b.x, b.y, 0, 1);
             vertices[vertexBase + 2]._position = float4(c.x, c.y, 0, 1);
-            
+
             pushIndex(indices, vertexBase + 0);
             pushIndex(indices, vertexBase + 1);
             pushIndex(indices, vertexBase + 2);
@@ -263,7 +275,7 @@ namespace SimpleRenderer
             const float2& halfSize = size * 0.5f;
             const float cosTheta = ::cos(rotationAngle);
             const float sinTheta = ::sin(rotationAngle);
-            const float2 rotatedX = float2( cosTheta, sinTheta);
+            const float2 rotatedX = float2(cosTheta, sinTheta);
             const float2 rotatedY = float2(-sinTheta, cosTheta);
             vertices[vertexBase + 0]._position.setPoint(centerPosition - rotatedX * halfSize.x - rotatedY * halfSize.y);
             vertices[vertexBase + 1]._position.setPoint(centerPosition + rotatedX * halfSize.x - rotatedY * halfSize.y);
@@ -296,7 +308,7 @@ namespace SimpleRenderer
                 const float x = radius * ::cos(theta);
                 const float y = -radius * ::sin(theta);
                 vertices[vertexBase + sideIndex + 1]._position = float4(centerPosition.x + x, centerPosition.y + y, 0, 1);
-                
+
                 pushIndex(indices, vertexBase + 0);
                 pushIndex(indices, vertexBase + sideIndex + 2);
                 pushIndex(indices, vertexBase + sideIndex + 1);
@@ -487,24 +499,71 @@ namespace SimpleRenderer
         return false;
     }
 
-    bool Resource::create(Renderer& renderer, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount)
+    bool Resource::createTexture2D(Renderer& renderer, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height)
     {
-        _type = type;
+        ComPtr<ID3D11Resource> newResource;
+        D3D11_TEXTURE2D_DESC texture2DDescriptor{};
+        texture2DDescriptor.Width = width;
+        texture2DDescriptor.Height = height;
+        texture2DDescriptor.MipLevels = 1;
+        texture2DDescriptor.ArraySize = 1;
+        texture2DDescriptor.Format = __convert_to_DXGI_FORMAT(format);
+        texture2DDescriptor.SampleDesc.Count = 1;
+        texture2DDescriptor.Usage = D3D11_USAGE::D3D11_USAGE_DEFAULT;
+        texture2DDescriptor.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
+        texture2DDescriptor.CPUAccessFlags = 0;
+        const uint32 elementStride = __computeElementStride(format);
+        D3D11_SUBRESOURCE_DATA subResource{};
+        subResource.pSysMem = resourceContent;
+        subResource.SysMemPitch = texture2DDescriptor.Width * elementStride;
+        subResource.SysMemSlicePitch = 0;
+        if (SUCCEEDED(renderer.getDevice()->CreateTexture2D(&texture2DDescriptor, &subResource, reinterpret_cast<ID3D11Texture2D**>(newResource.ReleaseAndGetAddressOf()))))
+        {
+            D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDescriptor;
+            shaderResourceViewDescriptor.Format = texture2DDescriptor.Format;
+            shaderResourceViewDescriptor.ViewDimension = D3D11_SRV_DIMENSION::D3D11_SRV_DIMENSION_TEXTURE2D;
+            shaderResourceViewDescriptor.Texture2D.MipLevels = texture2DDescriptor.MipLevels;
+            shaderResourceViewDescriptor.Texture2D.MostDetailedMip = 0;
+            if (SUCCEEDED(renderer.getDevice()->CreateShaderResourceView(newResource.Get(), &shaderResourceViewDescriptor, reinterpret_cast<ID3D11ShaderResourceView**>(_view.ReleaseAndGetAddressOf()))))
+            {
+                _type = ResourceType::Teture2D;
+                _format = format;
+
+                _elementStride = elementStride;
+                _elementMaxCount = texture2DDescriptor.Width * texture2DDescriptor.Height;
+                //_resourceCapacity = _elementStride * _elementMaxCount;
+
+                _width = width;
+                //_height = _width / _elementMaxCount;
+
+                std::swap(_resource, newResource);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool Resource::createBuffer(Renderer& renderer, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount)
+    {
+        if (type == ResourceType::Teture2D)
+        {
+            MINT_ASSERT(false, "Use createTexture2D() instead!");
+            return false;
+        }
 
         ComPtr<ID3D11Resource> newResource;
         D3D11_BUFFER_DESC bufferDescriptor{};
         bufferDescriptor.Usage = D3D11_USAGE::D3D11_USAGE_DYNAMIC;
         bufferDescriptor.ByteWidth = elementStride * elementCount;
-        bufferDescriptor.BindFlags = D3D11_BIND_FLAG(1 << ((uint32)_type)); // !!! CAUTION !!!
+        bufferDescriptor.BindFlags = D3D11_BIND_FLAG(1 << (uint32)type); // !!! CAUTION !!!
         bufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::D3D11_CPU_ACCESS_WRITE;
         bufferDescriptor.MiscFlags = 0;
         bufferDescriptor.StructureByteStride = 0;
-
         D3D11_SUBRESOURCE_DATA subresourceData{};
         subresourceData.pSysMem = content;
-
         if (SUCCEEDED(renderer.getDevice()->CreateBuffer(&bufferDescriptor, (content != nullptr) ? &subresourceData : nullptr, reinterpret_cast<ID3D11Buffer**>(newResource.ReleaseAndGetAddressOf()))))
         {
+            _type = type;
             _byteSize = bufferDescriptor.ByteWidth;
             _elementStride = elementStride;
             _elementMaxCount = elementCount;
@@ -564,6 +623,37 @@ namespace SimpleRenderer
         }
         return false;
     }
+
+    DXGI_FORMAT Resource::__convert_to_DXGI_FORMAT(const TextureFormat& format)
+    {
+        switch (format)
+        {
+        case TextureFormat::R8_UNORM:
+            return DXGI_FORMAT::DXGI_FORMAT_R8_UNORM;
+        case TextureFormat::R8G8B8A8_UNORM:
+            return DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
+        default:
+            break;
+        }
+        MINT_ASSERT(false, "This texture format is not supported yet!");
+        return DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
+    }
+
+    uint32 Resource::__computeElementStride(const TextureFormat& format)
+    {
+        switch (format)
+        {
+        case TextureFormat::R8_UNORM:
+            return 1;
+        case TextureFormat::R8G8B8A8_UNORM:
+            return 4;
+        default:
+            break;
+        }
+        MINT_ASSERT(false, "This texture format is not supported yet!");
+        return 4;
+    }
+
     static LRESULT WINAPI windowProcedure(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
     {
         switch (Msg)

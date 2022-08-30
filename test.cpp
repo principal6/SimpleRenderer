@@ -84,7 +84,7 @@ int main()
     {
         CB_MATRICES cb_matrices;
         cb_matrices._projectionMatrix.makePixelCoordinatesProjectionMatrix(kScreenSize);
-        vscbMatrices.create(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
+        vscbMatrices.createBuffer(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
     }
     renderer.bindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
 
@@ -102,8 +102,8 @@ int main()
         vertices[1]._color = float4(1, 1, 0, 1);
         vertices[2]._color = float4(0, 1, 1, 1);
         vertices[3]._color = float4(1, 0, 1, 1);
-        vertexBuffer.create(renderer, ResourceType::VertexBuffer, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
-        indexBuffer.create(renderer, ResourceType::IndexBuffer, &indices[0], sizeof(uint32), (uint32)indices.size());
+        vertexBuffer.createBuffer(renderer, ResourceType::VertexBuffer, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
+        indexBuffer.createBuffer(renderer, ResourceType::IndexBuffer, &indices[0], sizeof(uint32), (uint32)indices.size());
     }
     renderer.bindInput(vertexBuffer, 0);
     renderer.bindInput(indexBuffer, 0);
