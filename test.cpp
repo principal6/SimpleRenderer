@@ -143,7 +143,7 @@ int main()
     std::vector<VS_INPUT> fontVertices;
     std::vector<uint32> fontIndices;
     {
-        MeshGenerator<VS_INPUT>::push_2D_rectangle(float2(128, 240), float2(256, 480), 0.0f, fontVertices, fontIndices);
+        MeshGenerator<VS_INPUT>::push_2D_rectangle(float2(256, 240), float2(512, 480), 0.0f, fontVertices, fontIndices);
         fontVertices[0]._texcoord = float2(0, 0);
         fontVertices[1]._texcoord = float2(1, 0);
         fontVertices[2]._texcoord = float2(0, 1);
