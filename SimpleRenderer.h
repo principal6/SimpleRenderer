@@ -259,19 +259,22 @@ namespace SimpleRenderer
         }
     )";
 
-    struct ShaderHeader : public ID3DInclude
+    struct ShaderHeaderSet : public ID3DInclude
     {
     public:
-        ShaderHeader() = default;
-        virtual ~ShaderHeader() = default;
+        ShaderHeaderSet() = default;
+        virtual ~ShaderHeaderSet() = default;
+
+    public:
+        void pushShaderHeader(const std::string& headerName, const std::string& headerCode);
 
     public:
         virtual HRESULT Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) override final;
         virtual HRESULT Close(LPCVOID pData) override final { return S_OK; }
 
     public:
-        std::string _headerName;
-        std::string _headerCode;
+        std::vector<std::string> _headerNames;
+        std::vector<std::string> _headerCodes;
     };
 
     struct ShaderInputLayout
@@ -335,7 +338,7 @@ namespace SimpleRenderer
 
     struct Shader
     {
-        bool create(Renderer& renderer, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeader* const shaderHeader = nullptr);
+        bool create(Renderer& renderer, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet = nullptr);
 
         ShaderType _type = ShaderType::VertexShader;
         ComPtr<ID3D10Blob> _shaderBlob;
@@ -543,7 +546,7 @@ namespace SimpleRenderer
         bool _is_IndexBuffer_bound = false;
 
     private:
-        ShaderHeader _defaultFontShaderHeader;
+        ShaderHeaderSet _defaultFontShaderHeaderSet;
         Shader _defaultFontVertexShader;
         ShaderInputLayout _defaultFontShaderInputLayout;
         Shader _defaultFontPixelShader;
@@ -557,12 +560,25 @@ namespace SimpleRenderer
 
 
 #pragma region Function Definitions
-    HRESULT ShaderHeader::Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes)
+    void ShaderHeaderSet::pushShaderHeader(const std::string& headerName, const std::string& headerCode)
     {
-        pFileName = _headerName.c_str();
-        *ppData = _headerCode.c_str();
-        *pBytes = static_cast<UINT>(_headerCode.length());
-        return S_OK;
+        _headerNames.push_back(headerName);
+        _headerCodes.push_back(headerCode);
+    }
+
+    HRESULT ShaderHeaderSet::Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes)
+    {
+        const uint32 headerCount = (uint32)_headerNames.size();
+        for (uint32 headerIndex = 0; headerIndex < headerCount; headerIndex++)
+        {
+            if (_headerNames[headerIndex] == pFileName)
+            {
+                *ppData = _headerCodes[headerIndex].c_str();
+                *pBytes = static_cast<UINT>(_headerCodes[headerIndex].length());
+                return S_OK;
+            }
+        }
+        return E_FAIL;
     }
 
     void ShaderInputLayout::clearInputElements()
@@ -603,7 +619,7 @@ namespace SimpleRenderer
         return true;
     }
 
-    bool Shader::create(Renderer& renderer, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeader* const shaderHeader)
+    bool Shader::create(Renderer& renderer, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet)
     {
         if (sourceCode == nullptr)
         {
@@ -626,7 +642,7 @@ namespace SimpleRenderer
         _type = shaderType;
 
         const UINT debugFlag = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-        HRESULT result = D3DCompile(sourceCode, ::strlen(sourceCode), shaderIdentifier, nullptr, shaderHeader, entryPoint, target, debugFlag, 0, _shaderBlob.ReleaseAndGetAddressOf(), _errorMessageBlob.ReleaseAndGetAddressOf());
+        HRESULT result = D3DCompile(sourceCode, ::strlen(sourceCode), shaderIdentifier, nullptr, shaderHeaderSet, entryPoint, target, debugFlag, 0, _shaderBlob.ReleaseAndGetAddressOf(), _errorMessageBlob.ReleaseAndGetAddressOf());
         if (FAILED(result))
         {
             std::string errorMessages(reinterpret_cast<char*>(_errorMessageBlob->GetBufferPointer()));
@@ -1116,17 +1132,16 @@ namespace SimpleRenderer
     {
         Renderer& renderer = *this;
 
-        _defaultFontShaderHeader._headerName = "DefaultFontShaderHeader";
-        _defaultFontShaderHeader._headerCode = kDefaultFontShaderHeaderCode;
+        _defaultFontShaderHeaderSet.pushShaderHeader("DefaultFontShaderHeader", kDefaultFontShaderHeaderCode);
 
-        _defaultFontVertexShader.create(renderer, kDefaultFontVertexShaderCode, ShaderType::VertexShader, "DefaultFontVertexShader", "main", "vs_5_0", &_defaultFontShaderHeader);
+        _defaultFontVertexShader.create(renderer, kDefaultFontVertexShaderCode, ShaderType::VertexShader, "DefaultFontVertexShader", "main", "vs_5_0", &_defaultFontShaderHeaderSet);
 
         _defaultFontShaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat4("POSITION", 0));
         _defaultFontShaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat4("COLOR", 0));
         _defaultFontShaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat2("TEXCOORD", 0));
         _defaultFontShaderInputLayout.create(renderer, _defaultFontVertexShader);
 
-        _defaultFontPixelShader.create(renderer, kDefaultFontPixelShaderCode, ShaderType::PixelShader, "DefaultFontPixelShader", "main", "ps_5_0", &_defaultFontShaderHeader);
+        _defaultFontPixelShader.create(renderer, kDefaultFontPixelShaderCode, ShaderType::PixelShader, "DefaultFontPixelShader", "main", "ps_5_0", &_defaultFontShaderHeaderSet);
 
         DEFAULT_FONT_CB_MATRICES default_font_cb_matrices;
         default_font_cb_matrices._projectionMatrix.makePixelCoordinatesProjectionMatrix(_windowSize);

@@ -1,6 +1,6 @@
 ﻿#include "SimpleRenderer.h"
 
-const char kStreamDataCode[] =
+const char kShaderHeaderCode_StreamData[] =
 R"(
     struct VS_INPUT
     {
@@ -16,7 +16,7 @@ R"(
     };
 )";
 
-const char kVertexShaderCode0[] =
+const char kVertexShaderCode[] =
 R"(
     #include "StreamData"
     
@@ -36,7 +36,7 @@ R"(
     }
 )";
 
-const char kPixelShaderCode0[] =
+const char kPixelShaderCode[] =
 R"(
     #include "StreamData"
     
@@ -66,12 +66,11 @@ int main()
     
     Renderer renderer{ Renderer(kScreenSize, Color(0, 0.5f, 1, 1)) };
     
-    ShaderHeader shaderHeaderStreamData;
-    shaderHeaderStreamData._headerName = "StreamData";
-    shaderHeaderStreamData._headerCode = kStreamDataCode;
+    ShaderHeaderSet shaderHeaderSet;
+    shaderHeaderSet.pushShaderHeader("StreamData", kShaderHeaderCode_StreamData);
 
     Shader vertexShader0;
-    vertexShader0.create(renderer, kVertexShaderCode0, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderStreamData);
+    vertexShader0.create(renderer, kVertexShaderCode, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderSet);
     renderer.bindShader(vertexShader0);
 
     ShaderInputLayout shaderInputLayout;
@@ -82,7 +81,7 @@ int main()
     renderer.bindShaderInputLayout(shaderInputLayout);
 
     Shader pixelShader0;
-    pixelShader0.create(renderer, kPixelShaderCode0, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderStreamData);
+    pixelShader0.create(renderer, kPixelShaderCode, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderSet);
     renderer.bindShader(pixelShader0);
 
     Resource vscbMatrices;
