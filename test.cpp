@@ -114,12 +114,12 @@ int main()
     {
         if (renderer.beginRendering())
         {
-            //renderer.bindShader(pixelShader0);
-            //renderer.bindInput(vertexBuffer, 0);
-            //renderer.bindInput(indexBuffer, 0);
-            //renderer.drawIndexed((uint32)indices.size());
+            renderer.bindShader(pixelShader0);
+            renderer.bindInput(vertexBuffer, 0);
+            renderer.bindInput(indexBuffer, 0);
+            renderer.drawIndexed((uint32)indices.size());
 
-            renderer.drawText("abc");
+            renderer.drawText("abcdefgABCDEFG TESTING FONT RENDERING!!", float2(250, 50));
 
             renderer.endRendering();
         }

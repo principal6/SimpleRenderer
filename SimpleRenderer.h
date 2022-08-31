@@ -6,6 +6,7 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <unordered_map>
 #include <d3dcompiler.h>
 
 #pragma comment(lib, "d3d11.lib")
@@ -45,6 +46,9 @@ namespace SimpleRenderer
     static constexpr uint32 kFontTextureWidth = 128;
     static constexpr uint32 kFontTextureHeight = 60;
     static constexpr uint32 kFontTextureByteCount = kFontTextureWidth * kFontTextureHeight;
+    static constexpr uint32 kFontTextureGlyphWidth = 8;
+    static constexpr uint32 kFontTextureGlyphHeight = 10;
+    static constexpr uint32 kFontTextureGlyphCountInRow = kFontTextureWidth / kFontTextureGlyphWidth;
     static constexpr const byte kFontTextureRawBitData[kFontTextureByteCount / 8]
     {
         0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
@@ -97,15 +101,15 @@ namespace SimpleRenderer
         0b00000000, 0b01110010, 0b01111000, 0b00111000, 0b00111100, 0b00111000, 0b00010000, 0b00000100, 0b01000100, 0b00011000, 0b01001000, 0b01000100, 0b00101100, 0b01010100, 0b01000100, 0b00111000,
         0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00110000, 0b00111000, 0b00000000, 0b00000000, 0b00110000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
         0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
-        0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
-        0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00011000, 0b00010000, 0b00110000, 0b00000000, 0b00000000,
-        0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00010000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00100000, 0b00010000, 0b00001000, 0b00000000, 0b00000000,
-        0b01011100, 0b01110100, 0b01011000, 0b00111100, 0b01111100, 0b01000100, 0b01000100, 0b01000100, 0b01000100, 0b10001000, 0b11111000, 0b00100000, 0b00010000, 0b00001000, 0b11100000, 0b00000000,
-        0b01100010, 0b10001100, 0b01100100, 0b01000010, 0b00010000, 0b01000100, 0b01000100, 0b01010100, 0b00101000, 0b10001000, 0b00010000, 0b01100000, 0b00010000, 0b00001100, 0b10010010, 0b00000000,
-        0b01000010, 0b10000100, 0b01000000, 0b00111000, 0b00010000, 0b01000100, 0b01000100, 0b01010100, 0b00010000, 0b10001000, 0b00100000, 0b00100000, 0b00010000, 0b00001000, 0b00001110, 0b00000000,
-        0b01111100, 0b01111100, 0b01000000, 0b00000110, 0b00010010, 0b01000100, 0b00101000, 0b01010100, 0b00101000, 0b01111000, 0b01000000, 0b00100000, 0b00010000, 0b00001000, 0b00000000, 0b00000000,
-        0b01000000, 0b00000100, 0b01000000, 0b01111100, 0b00001100, 0b00111010, 0b00010000, 0b00101000, 0b01000100, 0b00001000, 0b11111000, 0b00011000, 0b00010000, 0b00110000, 0b00000000, 0b00000000,
-        0b01000000, 0b00000100, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b01110000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
+        0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b11111110,
+        0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00011000, 0b00010000, 0b00110000, 0b00000000, 0b11000110,
+        0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00010000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00100000, 0b00010000, 0b00001000, 0b00000000, 0b10101010,
+        0b01011100, 0b01110100, 0b01011000, 0b00111100, 0b01111100, 0b01000100, 0b01000100, 0b01000100, 0b01000100, 0b10001000, 0b11111000, 0b00100000, 0b00010000, 0b00001000, 0b11100000, 0b10010010,
+        0b01100010, 0b10001100, 0b01100100, 0b01000010, 0b00010000, 0b01000100, 0b01000100, 0b01010100, 0b00101000, 0b10001000, 0b00010000, 0b01100000, 0b00010000, 0b00001100, 0b10010010, 0b10010010,
+        0b01000010, 0b10000100, 0b01000000, 0b00111000, 0b00010000, 0b01000100, 0b01000100, 0b01010100, 0b00010000, 0b10001000, 0b00100000, 0b00100000, 0b00010000, 0b00001000, 0b00001110, 0b10101010,
+        0b01111100, 0b01111100, 0b01000000, 0b00000110, 0b00010010, 0b01000100, 0b00101000, 0b01010100, 0b00101000, 0b01111000, 0b01000000, 0b00100000, 0b00010000, 0b00001000, 0b00000000, 0b11000110,
+        0b01000000, 0b00000100, 0b01000000, 0b01111100, 0b00001100, 0b00111010, 0b00010000, 0b00101000, 0b01000100, 0b00001000, 0b11111000, 0b00011000, 0b00010000, 0b00110000, 0b00000000, 0b10000010,
+        0b01000000, 0b00000100, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b01110000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b11111110,
         0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
     };
 #pragma endregion
@@ -254,10 +258,33 @@ namespace SimpleRenderer
         float4 main(VS_OUTPUT input) : SV_Target
         {
             float4 sampled = g_texture0.Sample(g_sampler0, input.texcoord.xy);
-            float4 sampledSqrt = sqrt(sampled.r);
-            return float4(sampledSqrt);
+            float4 sampledBold = sqrt(sqrt(sampled.r));
+            return float4(sampledBold);
         }
     )";
+
+    struct DefaultFontGlyphMeta
+    {
+        DefaultFontGlyphMeta() :DefaultFontGlyphMeta(0, 0, 0, 1, 1) { __noop; }
+        DefaultFontGlyphMeta(byte ch, float u0, float v0, float u1, float v1) : _ch{ ch }, _u0{ u0 }, _v0{ v0 }, _u1{ u1 }, _v1{ v1 } { __noop; }
+
+        byte _ch;
+        float _u0;
+        float _v0;
+        float _u1;
+        float _v1;
+    };
+
+    class DefaultFontData
+    {
+    public:
+        void pushGlyph(const DefaultFontGlyphMeta& glyphMeta);
+        const DefaultFontGlyphMeta& getGlyphMeta(const byte& ch) const;
+
+    private:
+        std::vector<DefaultFontGlyphMeta> _glyphMetas;
+        std::unordered_map<byte, uint64> _glyphMap;
+    };
 
     struct ShaderHeaderSet : public ID3DInclude
     {
@@ -508,7 +535,7 @@ namespace SimpleRenderer
         bool beginRendering();
         void draw(const uint32 vertexCount);
         void drawIndexed(const uint32 indexCount);
-        void drawText(const std::string& text);
+        void drawText(const std::string& text, const float2& position);
         void endRendering();
 
     public:
@@ -520,6 +547,7 @@ namespace SimpleRenderer
         void destroyWindow();
         void createDevice();
         void createDevice_createDefaultFontData();
+        void createDevice_createDefaultFontData_pushGlyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow]);
         void bindDefaultFontData();
 
     private:
@@ -554,12 +582,36 @@ namespace SimpleRenderer
         Resource _defaultFontTexture;
         Resource _defaultFontVertexBuffer;
         Resource _defaultFontIndexBuffer;
+        DefaultFontData _defaultFontData;
         std::vector<DEFAULT_FONT_VS_INPUT> _defaultFontVertices;
         std::vector<uint32> _defaultFontIndices;
+        float2 _defaultFontScale = float2(1.25f, 2.25f);
     };
 
 
 #pragma region Function Definitions
+    void DefaultFontData::pushGlyph(const DefaultFontGlyphMeta& glyphMeta)
+    {
+        auto found = _glyphMap.find(glyphMeta._ch);
+        if (found != _glyphMap.end())
+        {
+            return;
+        }
+
+        _glyphMetas.push_back(glyphMeta);
+        _glyphMap.insert(std::pair<byte, uint64>(glyphMeta._ch, _glyphMetas.size() - 1));
+    }
+
+    const DefaultFontGlyphMeta& DefaultFontData::getGlyphMeta(const byte& ch) const
+    {
+        auto found = _glyphMap.find(ch);
+        if (found == _glyphMap.end())
+        {
+            return _glyphMetas[_glyphMap.find(0)->second];
+        }
+        return _glyphMetas[found->second];
+    }
+
     void ShaderHeaderSet::pushShaderHeader(const std::string& headerName, const std::string& headerCode)
     {
         _headerNames.push_back(headerName);
@@ -746,6 +798,11 @@ namespace SimpleRenderer
 
     bool Resource::update(Renderer& renderer, const void* const content, const uint32 elementStride, const uint32 elementCount)
     {
+        if (elementCount > _elementMaxCount)
+        {
+            return createBuffer(renderer, _type, content, elementStride, elementCount);
+        }
+
         class SafeResourceMapper
         {
         public:
@@ -978,10 +1035,32 @@ namespace SimpleRenderer
         _deviceContext->DrawIndexed(indexCount, 0, 0);
     }
 
-    void Renderer::drawText(const std::string& text)
+    void Renderer::drawText(const std::string& text, const float2& position)
     {
-        // TODO
-        __noop;
+        if (text.empty() == true)
+        {
+            return;
+        }
+
+        const float unit_x = _defaultFontScale.x * kFontTextureGlyphWidth;
+        const float unit_y = _defaultFontScale.y * kFontTextureGlyphHeight;
+        const float2 sizeUnit = float2(unit_x, unit_y);
+        const float2 positionUnit = float2(unit_x, 0);
+        uint32 chCount = 0;
+        for (const char& ch : text)
+        {
+            const DefaultFontGlyphMeta& glyphMeta = _defaultFontData.getGlyphMeta(ch);
+            const float u0 = glyphMeta._u0;
+            const float u1 = glyphMeta._u1;
+            const float v0 = glyphMeta._v0;
+            const float v1 = glyphMeta._v1;
+            MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(position + sizeUnit * 0.5f + positionUnit * (float)chCount, sizeUnit, 0.0f, _defaultFontVertices, _defaultFontIndices);
+            _defaultFontVertices[_defaultFontVertices.size() - 4]._texcoord = float2(u0, v0);
+            _defaultFontVertices[_defaultFontVertices.size() - 3]._texcoord = float2(u1, v0);
+            _defaultFontVertices[_defaultFontVertices.size() - 2]._texcoord = float2(u0, v1);
+            _defaultFontVertices[_defaultFontVertices.size() - 1]._texcoord = float2(u1, v1);
+            ++chCount;
+        }
     }
 
     void Renderer::draw(const uint32 vertexCount)
@@ -997,9 +1076,14 @@ namespace SimpleRenderer
 
     void Renderer::endRendering()
     {
+        _defaultFontVertexBuffer.update(*this, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
+        _defaultFontIndexBuffer.update(*this, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
+
         bindDefaultFontData();
 
         drawIndexed((uint32)_defaultFontIndices.size());
+        _defaultFontVertices.clear();
+        _defaultFontIndices.clear();
 
         _swapChain->Present(0, 0);
     }
@@ -1128,6 +1212,20 @@ namespace SimpleRenderer
         createDevice_createDefaultFontData();
     }
 
+    void Renderer::createDevice_createDefaultFontData_pushGlyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow])
+    {
+        const float glyphTextureWidth = (float)kFontTextureGlyphWidth;
+        const float glyphTextureHeight = (float)kFontTextureGlyphHeight;
+        const float glyphTextureUnit_U = glyphTextureWidth / kFontTextureWidth;
+        const float glyphTextureUnit_V = glyphTextureHeight / kFontTextureHeight;
+        const float v0 = glyphTextureUnit_V * rowIndex;
+        const float v1 = v0 + glyphTextureUnit_V;
+        for (uint32 iter = 0; iter < kFontTextureGlyphCountInRow; iter++)
+        {
+            _defaultFontData.pushGlyph(DefaultFontGlyphMeta(ch[iter], glyphTextureUnit_U * iter, v0, glyphTextureUnit_U * (iter + 1), v1));
+        }
+    }
+
     void Renderer::createDevice_createDefaultFontData()
     {
         Renderer& renderer = *this;
@@ -1155,7 +1253,7 @@ namespace SimpleRenderer
             const byte byte_ = (kFontTextureRawBitData[byteAt] >> (7 - bitAt)) & 1;
             bytes[iter] = byte_ * 255;
         }
-        _defaultFontTexture.createTexture2D(renderer, TextureFormat::R8_UNORM, bytes, 128, 60);
+        _defaultFontTexture.createTexture2D(renderer, TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight);
 
         MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(float2(256, 240), float2(512, 480), 0.0f, _defaultFontVertices, _defaultFontIndices);
         _defaultFontVertices[0]._texcoord = float2(0, 0);
@@ -1164,6 +1262,24 @@ namespace SimpleRenderer
         _defaultFontVertices[3]._texcoord = float2(1, 1);
         _defaultFontVertexBuffer.createBuffer(renderer, ResourceType::VertexBuffer, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
         _defaultFontIndexBuffer.createBuffer(renderer, ResourceType::IndexBuffer, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
+
+        byte row0[kFontTextureGlyphCountInRow]{ ' ','!','\"','$','#','%','&','\'','(','*','+',',','-','.','/',')' };
+        createDevice_createDefaultFontData_pushGlyphRow(0, row0);
+
+        byte row1[kFontTextureGlyphCountInRow]{ '0','1','2','3','4','5','6','7','8','9',':',';','<','=','>','?' };
+        createDevice_createDefaultFontData_pushGlyphRow(1, row1);
+
+        byte row2[kFontTextureGlyphCountInRow]{ '@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O' };
+        createDevice_createDefaultFontData_pushGlyphRow(2, row2);
+
+        byte row3[kFontTextureGlyphCountInRow]{ 'P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_' };
+        createDevice_createDefaultFontData_pushGlyphRow(3, row3);
+
+        byte row4[kFontTextureGlyphCountInRow]{ '`','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o' };
+        createDevice_createDefaultFontData_pushGlyphRow(4, row4);
+
+        byte row5[kFontTextureGlyphCountInRow]{ 'p','q','r','s','t','u','v','w','x','y','z','(','|',')','~', 0 };
+        createDevice_createDefaultFontData_pushGlyphRow(5, row5);
     }
 
     void Renderer::bindDefaultFontData()
