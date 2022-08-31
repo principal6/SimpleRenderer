@@ -46,20 +46,6 @@ R"(
     }
 )";
 
-const char kPixelShaderCode_Font[] =
-R"(
-    #include "StreamData"
-    
-    sampler g_sampler0;
-    Texture2D<float4> g_texture0;
-    float4 main(VS_OUTPUT input) : SV_Target
-    {
-        float4 sampled = g_texture0.Sample(g_sampler0, input.texcoord.xy);
-        float4 sampledSqrt = sqrt(sampled.r);
-        return float4(sampledSqrt);
-    }
-)";
-
 int main()
 {
     using namespace SimpleRenderer;
@@ -97,8 +83,6 @@ int main()
 
     Shader pixelShader0;
     pixelShader0.create(renderer, kPixelShaderCode0, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderStreamData);
-    Shader fontPixelShader;
-    fontPixelShader.create(renderer, kPixelShaderCode_Font, ShaderType::PixelShader, "FontPixelShader", "main", "ps_5_0", &shaderHeaderStreamData);
     renderer.bindShader(pixelShader0);
 
     Resource vscbMatrices;
@@ -109,17 +93,6 @@ int main()
     }
     renderer.bindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
 
-    Resource fontTexture;
-    byte bytes[kFontTextureByteCount];
-    for (uint32 iter = 0; iter < kFontTextureByteCount; iter++)
-    {
-        const uint32 bitAt = iter % 8;
-        const uint32 byteAt = iter / 8;
-        const byte byte_ = (kFontTextureRawBitData[byteAt] >> (7 - bitAt)) & 1;
-        bytes[iter] = byte_ * 255;
-    }
-    fontTexture.createTexture2D(renderer, TextureFormat::R8_UNORM, bytes, 128, 60);
-    
     Resource vertexBuffer;
     Resource indexBuffer;
     std::vector<VS_INPUT> vertices;
@@ -138,20 +111,6 @@ int main()
         indexBuffer.createBuffer(renderer, ResourceType::IndexBuffer, &indices[0], sizeof(uint32), (uint32)indices.size());
     }
     
-    Resource fontVertexBuffer;
-    Resource fontIndexBuffer;
-    std::vector<VS_INPUT> fontVertices;
-    std::vector<uint32> fontIndices;
-    {
-        MeshGenerator<VS_INPUT>::push_2D_rectangle(float2(256, 240), float2(512, 480), 0.0f, fontVertices, fontIndices);
-        fontVertices[0]._texcoord = float2(0, 0);
-        fontVertices[1]._texcoord = float2(1, 0);
-        fontVertices[2]._texcoord = float2(0, 1);
-        fontVertices[3]._texcoord = float2(1, 1);
-        fontVertexBuffer.createBuffer(renderer, ResourceType::VertexBuffer, &fontVertices[0], sizeof(VS_INPUT), (uint32)fontVertices.size());
-        fontIndexBuffer.createBuffer(renderer, ResourceType::IndexBuffer, &fontIndices[0], sizeof(uint32), (uint32)fontIndices.size());
-    }
-
     while (renderer.isRunning())
     {
         if (renderer.beginRendering())
@@ -161,11 +120,7 @@ int main()
             //renderer.bindInput(indexBuffer, 0);
             //renderer.drawIndexed((uint32)indices.size());
 
-            renderer.bindShader(fontPixelShader);
-            renderer.bindInput(fontVertexBuffer, 0);
-            renderer.bindInput(fontIndexBuffer, 0);
-            renderer.bindShaderResource(ShaderType::PixelShader, fontTexture, 0);
-            renderer.drawIndexed((uint32)fontIndices.size());
+            renderer.drawText("abc");
 
             renderer.endRendering();
         }
