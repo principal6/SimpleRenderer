@@ -1002,17 +1002,6 @@ namespace SimpleRenderer
 
     bool Renderer::beginRendering()
     {
-        if (_is_InputLayout_bound == false)
-        {
-            MINT_LOG_ERROR("You must bind ShaderInputLayout first!");
-            return false;
-        }
-        if (_is_VS_bound == false || _is_PS_bound == false)
-        {
-            MINT_LOG_ERROR("You must at least bind VertexShader and PixelShader first!");
-            return false;
-        }
-
         _deviceContext->ClearRenderTargetView(_backBufferRtv.Get(), _clearColor.f);
         _deviceContext->ClearDepthStencilView(_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
         useTrianglePrimitive();
@@ -1021,6 +1010,16 @@ namespace SimpleRenderer
 
     void Renderer::drawIndexed(const uint32 indexCount)
     {
+        if (_is_InputLayout_bound == false)
+        {
+            MINT_LOG_ERROR("You must bind ShaderInputLayout first!");
+            return;
+        }
+        if (_is_VS_bound == false || _is_PS_bound == false)
+        {
+            MINT_LOG_ERROR("You must at least bind VertexShader and PixelShader first!");
+            return;
+        }
         if (_is_VertexBuffer_bound == false)
         {
             MINT_LOG_ERROR("You must bind VertexBuffer first!");

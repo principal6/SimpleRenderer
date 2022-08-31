@@ -71,26 +71,20 @@ int main()
 
     Shader vertexShader0;
     vertexShader0.create(renderer, kVertexShaderCode, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderSet);
-    renderer.bindShader(vertexShader0);
 
     ShaderInputLayout shaderInputLayout;
     shaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat4("POSITION", 0));
     shaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat4("COLOR", 0));
     shaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat2("TEXCOORD", 0));
     shaderInputLayout.create(renderer, vertexShader0);
-    renderer.bindShaderInputLayout(shaderInputLayout);
 
     Shader pixelShader0;
     pixelShader0.create(renderer, kPixelShaderCode, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderSet);
-    renderer.bindShader(pixelShader0);
 
     Resource vscbMatrices;
-    {
-        CB_MATRICES cb_matrices;
-        cb_matrices._projectionMatrix.makePixelCoordinatesProjectionMatrix(kScreenSize);
-        vscbMatrices.createBuffer(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
-    }
-    renderer.bindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
+    CB_MATRICES cb_matrices;
+    cb_matrices._projectionMatrix.makePixelCoordinatesProjectionMatrix(kScreenSize);
+    vscbMatrices.createBuffer(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
 
     Resource vertexBuffer;
     Resource indexBuffer;
@@ -114,9 +108,12 @@ int main()
     {
         if (renderer.beginRendering())
         {
+            renderer.bindShader(vertexShader0);
+            renderer.bindShaderInputLayout(shaderInputLayout);
             renderer.bindShader(pixelShader0);
             renderer.bindInput(vertexBuffer, 0);
             renderer.bindInput(indexBuffer, 0);
+            renderer.bindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
             renderer.drawIndexed((uint32)indices.size());
 
             renderer.drawText("abcdefgABCDEFG TESTING FONT RENDERING!!", float2(250, 50));
