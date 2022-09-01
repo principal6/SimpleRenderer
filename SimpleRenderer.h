@@ -174,10 +174,30 @@ namespace SimpleRenderer
         {
             _11 = 1; _12 = 0; _13 = 0; _14 = 0; _21 = 0; _22 = 1; _23 = 0; _24 = 0; _31 = 0; _32 = 0; _33 = 1; _34 = 0; _41 = 0; _42 = 0; _43 = 0; _44 = 1;
         }
+        void makeZero()
+        {
+            _11 = 0; _12 = 0; _13 = 0; _14 = 0; _21 = 0; _22 = 0; _23 = 0; _24 = 0; _31 = 0; _32 = 0; _33 = 0; _34 = 0; _41 = 0; _42 = 0; _43 = 0; _44 = 0;
+        }
         void makePixelCoordinatesProjectionMatrix(const float2& screenSize)
         {
             makeIdentity();
             _11 = 2.0f / screenSize.x; _14 = -1.0f; _22 = -2.0f / screenSize.y; _24 = 1.0f;
+        }
+        void makePerspectiveProjectionMatrix(const float FOVAngle, const float nearDepth, const float farDepth, const float screenWidthOverHeight)
+        {
+            makeZero();
+            bool isRightHanded = true;
+            const float halfFOVAngle = FOVAngle * 0.5f;
+            const float a = 1.0f / (tanf(halfFOVAngle) * screenWidthOverHeight);
+            const float b = 1.0f / (tanf(halfFOVAngle));
+            const float c = (farDepth / (nearDepth - farDepth)) * (isRightHanded ? +1.0f : -1.0f);
+            const float d = (farDepth * nearDepth) / (nearDepth - farDepth);
+            const float e = (isRightHanded ? -1.0f : +1.0f);
+            _11 = a;
+            _22 = b;
+            _33 = c;
+            _34 = d;
+            _43 = e;
         }
     };
     using Color = float4;
