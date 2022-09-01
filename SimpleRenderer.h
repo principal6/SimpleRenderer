@@ -183,15 +183,15 @@ namespace SimpleRenderer
             makeIdentity();
             _11 = 2.0f / screenSize.x; _14 = -1.0f; _22 = -2.0f / screenSize.y; _24 = 1.0f;
         }
-        void makePerspectiveProjectionMatrix(const float FOVAngle, const float nearDepth, const float farDepth, const float screenWidthOverHeight)
+        void makePerspectiveProjectionMatrix(const float FOVAngle, const float nearDepthAbs, const float farDepthAbs, const float screenWidthOverHeight)
         {
             makeZero();
             bool isRightHanded = true;
             const float halfFOVAngle = FOVAngle * 0.5f;
             const float a = 1.0f / (tanf(halfFOVAngle) * screenWidthOverHeight);
             const float b = 1.0f / (tanf(halfFOVAngle));
-            const float c = (farDepth / (nearDepth - farDepth)) * (isRightHanded ? +1.0f : -1.0f);
-            const float d = (farDepth * nearDepth) / (nearDepth - farDepth);
+            const float c = (farDepthAbs / (nearDepthAbs - farDepthAbs)) * (isRightHanded ? +1.0f : -1.0f);
+            const float d = (farDepthAbs * nearDepthAbs) / (nearDepthAbs - farDepthAbs);
             const float e = (isRightHanded ? -1.0f : +1.0f);
             _11 = a;
             _22 = b;
@@ -434,6 +434,23 @@ namespace SimpleRenderer
     class MeshGenerator
     {
     public:
+        static void push_3D_triangle(const float4& a, const float4& b, const float4& c, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+        {
+            const uint64 vertexBase = vertices.size();
+            vertices.resize(vertexBase + 3);
+
+            const uint64 indexBase = indices.size();
+            indices.reserve(indexBase + 3);
+
+            vertices[vertexBase + 0]._position = a;
+            vertices[vertexBase + 1]._position = b;
+            vertices[vertexBase + 2]._position = c;
+
+            pushIndex(indices, vertexBase + 0);
+            pushIndex(indices, vertexBase + 1);
+            pushIndex(indices, vertexBase + 2);
+        }
+
         static void push_2D_triangle(const float2& a, const float2& b, const float2& c, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
         {
             const uint64 vertexBase = vertices.size();

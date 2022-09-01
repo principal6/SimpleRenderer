@@ -83,7 +83,8 @@ int main()
 
     Resource vscbMatrices;
     CB_MATRICES cb_matrices;
-    cb_matrices._projectionMatrix.makePixelCoordinatesProjectionMatrix(kScreenSize);
+    //cb_matrices._projectionMatrix.makePixelCoordinatesProjectionMatrix(kScreenSize);
+    cb_matrices._projectionMatrix.makePerspectiveProjectionMatrix(kPi * 0.25f, 0.01f, 1000.0f, kScreenSize.x / kScreenSize.y);
     vscbMatrices.createBuffer(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
 
     Resource vertexBuffer;
@@ -91,15 +92,12 @@ int main()
     std::vector<VS_INPUT> vertices;
     std::vector<uint32> indices;
     {
-        MeshGenerator<VS_INPUT>::push_2D_rectangle(float2(200, 150), float2(200, 150), 0.1f, vertices, indices);
-        MeshGenerator<VS_INPUT>::push_2D_triangle(float2(500, 150), float2(450, 250), float2(550, 250), vertices, indices);
-        MeshGenerator<VS_INPUT>::push_2D_circle(float2(200, 350), 100, 16, vertices, indices);
-        MeshGenerator<VS_INPUT>::push_2D_lineSegment(float2(200, 550), float2(600, 350), 2, vertices, indices);
+        //MeshGenerator<VS_INPUT>::push_2D_rectangle(float2(200, 150), float2(200, 150), 0.1f, vertices, indices);
+        //MeshGenerator<VS_INPUT>::push_2D_triangle(float2(500, 150), float2(450, 250), float2(550, 250), vertices, indices);
+        //MeshGenerator<VS_INPUT>::push_2D_circle(float2(200, 350), 100, 16, vertices, indices);
+        //MeshGenerator<VS_INPUT>::push_2D_lineSegment(float2(200, 550), float2(600, 350), 2, vertices, indices);
+        MeshGenerator<VS_INPUT>::push_3D_triangle(float4(0, 0.25f, -1.0f, 1), float4(-0.25f, 0, -1.0f, 1), float4(0.25f, 0, -1.0f, 1), vertices, indices);
         MeshGenerator<VS_INPUT>::fillVertexColor(vertices, float4(1, 0.5f, 1, 1));
-        vertices[0]._color = float4(1, 0, 0, 1);
-        vertices[1]._color = float4(1, 1, 0, 1);
-        vertices[2]._color = float4(0, 1, 1, 1);
-        vertices[3]._color = float4(1, 0, 1, 1);
         vertexBuffer.createBuffer(renderer, ResourceType::VertexBuffer, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
         indexBuffer.createBuffer(renderer, ResourceType::IndexBuffer, &indices[0], sizeof(uint32), (uint32)indices.size());
     }
