@@ -462,20 +462,20 @@ namespace SimpleRenderer
             const float2& halfSize = size * 0.5f;
             const float cosTheta = ::cos(rotationAngle);
             const float sinTheta = ::sin(rotationAngle);
-            const float2 rotatedX = float2(cosTheta, sinTheta);
-            const float2 rotatedY = float2(-sinTheta, cosTheta);
+            const float2 rotatedX = float2(+cosTheta, -sinTheta);
+            const float2 rotatedY = float2(+sinTheta, +cosTheta);
             vertices[vertexBase + 0]._position.setPoint(centerPosition - rotatedX * halfSize.x - rotatedY * halfSize.y);
-            vertices[vertexBase + 1]._position.setPoint(centerPosition + rotatedX * halfSize.x - rotatedY * halfSize.y);
-            vertices[vertexBase + 2]._position.setPoint(centerPosition - rotatedX * halfSize.x + rotatedY * halfSize.y);
-            vertices[vertexBase + 3]._position.setPoint(centerPosition + rotatedX * halfSize.x + rotatedY * halfSize.y);
+            vertices[vertexBase + 1]._position.setPoint(centerPosition - rotatedX * halfSize.x + rotatedY * halfSize.y);
+            vertices[vertexBase + 2]._position.setPoint(centerPosition + rotatedX * halfSize.x + rotatedY * halfSize.y);
+            vertices[vertexBase + 3]._position.setPoint(centerPosition + rotatedX * halfSize.x - rotatedY * halfSize.y);
 
             pushIndex(indices, vertexBase + 0);
             pushIndex(indices, vertexBase + 1);
             pushIndex(indices, vertexBase + 2);
 
-            pushIndex(indices, vertexBase + 1);
-            pushIndex(indices, vertexBase + 3);
+            pushIndex(indices, vertexBase + 0);
             pushIndex(indices, vertexBase + 2);
+            pushIndex(indices, vertexBase + 3);
         }
 
         static void push_2D_circle(const float2& centerPosition, float radius, uint32 sideCount, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
@@ -497,10 +497,10 @@ namespace SimpleRenderer
                 vertices[vertexBase + sideIndex + 1]._position = float4(centerPosition.x + x, centerPosition.y + y, 0, 1);
 
                 pushIndex(indices, vertexBase + 0);
-                pushIndex(indices, vertexBase + sideIndex + 2);
                 pushIndex(indices, vertexBase + sideIndex + 1);
+                pushIndex(indices, vertexBase + sideIndex + 2);
             }
-            indices[indices.size() - 2] = static_cast<uint32>(vertexBase + 1);
+            indices[indices.size() - 1] = static_cast<uint32>(vertexBase + 1);
         }
 
         static void push_2D_lineSegment(const float2& a, const float2& b, float thickness, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
@@ -515,7 +515,7 @@ namespace SimpleRenderer
             }
 
             const float2 direction = ab / l;
-            const float rotationAngle = ::atan2f(direction.y, direction.x);
+            const float rotationAngle = ::atan2f(-direction.y, direction.x);
             const float2 m = (a + b) * 0.5f;
             push_2D_rectangle(m, float2(l, thickness), rotationAngle, vertices, indices);
         }
@@ -583,6 +583,7 @@ namespace SimpleRenderer
         ComPtr<ID3D11RenderTargetView> _backBufferRtv;
         ComPtr<ID3D11Texture2D> _depthStencilResource;
         ComPtr<ID3D11DepthStencilView> _depthStencilView;
+        ComPtr<ID3D11RasterizerState> _defaultRasterizerState;
         ComPtr<ID3D11SamplerState> _defaultSamplerState;
         ComPtr<ID3D11BlendState> _defaultBlendState;
 
@@ -1075,9 +1076,9 @@ namespace SimpleRenderer
             const float v1 = glyphMeta._v1;
             MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(position + sizeUnit * 0.5f + positionUnit * (float)chCount, sizeUnit, 0.0f, _defaultFontVertices, _defaultFontIndices);
             _defaultFontVertices[_defaultFontVertices.size() - 4]._texcoord = float2(u0, v0);
-            _defaultFontVertices[_defaultFontVertices.size() - 3]._texcoord = float2(u1, v0);
-            _defaultFontVertices[_defaultFontVertices.size() - 2]._texcoord = float2(u0, v1);
-            _defaultFontVertices[_defaultFontVertices.size() - 1]._texcoord = float2(u1, v1);
+            _defaultFontVertices[_defaultFontVertices.size() - 3]._texcoord = float2(u0, v1);
+            _defaultFontVertices[_defaultFontVertices.size() - 2]._texcoord = float2(u1, v1);
+            _defaultFontVertices[_defaultFontVertices.size() - 1]._texcoord = float2(u1, v0);
             ++chCount;
         }
     }
@@ -1184,6 +1185,22 @@ namespace SimpleRenderer
         {
             MINT_LOG_ERROR("Failed to create Depth-Stencil view.");
             return;
+        }
+
+        {
+            D3D11_RASTERIZER_DESC rasterizerDescriptor;
+            rasterizerDescriptor.AntialiasedLineEnable = TRUE;
+            rasterizerDescriptor.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
+            rasterizerDescriptor.DepthBias = 0;
+            rasterizerDescriptor.DepthBiasClamp = 0.0f;
+            rasterizerDescriptor.DepthClipEnable = TRUE;
+            rasterizerDescriptor.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
+            rasterizerDescriptor.FrontCounterClockwise = TRUE;
+            rasterizerDescriptor.MultisampleEnable = TRUE;
+            rasterizerDescriptor.ScissorEnable = FALSE;
+            rasterizerDescriptor.SlopeScaledDepthBias = 0.0f;
+            _device->CreateRasterizerState(&rasterizerDescriptor, _defaultRasterizerState.ReleaseAndGetAddressOf());
+            _deviceContext->RSSetState(_defaultRasterizerState.Get());
         }
 
         {
