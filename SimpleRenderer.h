@@ -30,6 +30,7 @@ namespace SimpleRenderer
 #pragma endregion
 
 #pragma region Forward Declaration
+    struct quaternion;
     class Renderer;
     struct Shader;
 #pragma endregion
@@ -129,6 +130,30 @@ namespace SimpleRenderer
         float length() const { return ::sqrt(lengthSq()); }
         union { struct { float x; float y; }; float f[2]; };
     };
+    struct float3
+    {
+        constexpr float3() : float3(0, 0, 0) { __noop; }
+        constexpr float3(float x_, float y_, float z_) : x{ x_ }, y{ y_ }, z{ z_ } { __noop; }
+        float& operator[](const uint32 index) { return f[index]; }
+        const float& operator[](const uint32 index) const { return f[index]; }
+        float3 operator+() const { return *this; }
+        float3 operator-() const { return float3(-x, -y, -z); }
+        float3 operator+(const float3& rhs) const { return float3(x + rhs.x, y + rhs.y, z + rhs.z); }
+        float3 operator-(const float3& rhs) const { return *this + (-rhs); }
+        float3 operator*(const float s) const { return float3(x * s, y * s, z * s); }
+        float3 operator/(const float s) const { return float3(x / s, y / s, z / s); }
+        float3& operator+=(const float3& rhs) { *this = (*this + rhs); return *this; }
+        float3& operator-=(const float3& rhs) { *this = (*this - rhs); return *this; }
+        float3& operator*=(const float s) { *this = (*this * s); return *this; }
+        float3& operator/=(const float s) { *this = (*this / s); return *this; }
+        constexpr float dot(const float3& rhs) const { return x * rhs.x + y * rhs.y + z * rhs.z; }
+        constexpr float lengthSq() const { return dot(*this); }
+        float length() const { return ::sqrt(lengthSq()); }
+        void normalize() { *this /= length(); }
+        float3 computeNormalized() const { float3 result = *this; result.normalize(); return result; }
+        void setPoint(const float2& position) { x = position.x; y = position.y; z = 0; }
+        union { struct { float x; float y; float z; }; float f[3]; };
+    };
     struct float4
     {
         constexpr float4() : float4(0, 0, 0, 0) { __noop; }
@@ -137,7 +162,7 @@ namespace SimpleRenderer
         const float& operator[](const uint32 index) const { return f[index]; }
         float4 operator+() const { return *this; }
         float4 operator-() const { return float4(-x, -y, -z, -w); }
-        float4 operator+(const float4& rhs) const { return float4(x + rhs.x, y + rhs.y, z + rhs.z, w + rhs.z); }
+        float4 operator+(const float4& rhs) const { return float4(x + rhs.x, y + rhs.y, z + rhs.z, w + rhs.w); }
         float4 operator-(const float4& rhs) const { return *this + (-rhs); }
         float4 operator*(const float s) const { return float4(x * s, y * s, z * s, w * s); }
         float4 operator/(const float s) const { return float4(x / s, y / s, z / s, w / s); }
@@ -148,8 +173,65 @@ namespace SimpleRenderer
         constexpr float dot(const float4& rhs) const { return x * rhs.x + y * rhs.y + z * rhs.z + w * rhs.w; }
         constexpr float lengthSq() const { return dot(*this); }
         float length() const { return ::sqrt(lengthSq()); }
+        void normalize() { *this /= length(); }
+        float4 computeNormalized() const { float4 result = *this; result.normalize(); return result; }
         void setPoint(const float2& position) { x = position.x; y = position.y; z = 0; w = 1; }
         union { struct { float x; float y; float z; float w; }; float f[4]; };
+    };
+    // quaternion = xi + yj + zk + w
+    struct quaternion
+    {
+        quaternion() : quaternion(0, 0, 0, 1) { __noop; }
+        quaternion(float x_, float y_, float z_, float w_) : x{ x_ }, y{ y_ }, z{ z_ }, w{ w_ } { __noop; }
+        quaternion& operator*=(const quaternion& rhs) noexcept
+        {
+            w = +w * rhs.w - x * rhs.x - y * rhs.y - z * rhs.z;
+            x = +w * rhs.x + x * rhs.w + y * rhs.z - z * rhs.y;
+            y = +w * rhs.y - x * rhs.z + y * rhs.w + z * rhs.x;
+            z = +w * rhs.z + x * rhs.y - y * rhs.x + z * rhs.w;
+            return *this;
+        }
+        float4 rotate(const float4& v) const noexcept
+        {
+            quaternion q = *this;
+            q *= quaternion(v.x, v.y, v.z, 0);
+            q *= quaternion::conjugate(*this);
+            return float4(q.x, q.y, q.z, v.w);
+        }
+        static quaternion makeFromAxisAngle(float3 axis, const float angle) noexcept
+        {
+            axis.normalize();
+            const float half_angle = angle * 0.5f;
+            const float cos_half = ::cos(half_angle);
+            const float sin_half = ::sin(half_angle);
+            return quaternion(sin_half * axis.x, sin_half * axis.y, sin_half * axis.z, cos_half);
+        }
+        void getAxisAngle(float3& axis, float& angle) const noexcept
+        {
+            angle = ::acos(w) * 2.0f;
+
+            const float sinHalfAngle = 1.0f - w * w;
+            if (sinHalfAngle == 0.0f)
+            {
+                axis[0] = 1;
+                axis[1] = 0;
+                axis[2] = 0;
+            }
+            else
+            {
+                axis[0] = x / sinHalfAngle;
+                axis[1] = y / sinHalfAngle;
+                axis[2] = z / sinHalfAngle;
+
+                const float normSq = axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2];
+                const float norm = ::sqrt(normSq);
+                axis[0] /= norm;
+                axis[1] /= norm;
+                axis[2] /= norm;
+            }
+        }
+        static quaternion conjugate(const quaternion& q) noexcept { return quaternion(-q.x, -q.y, -q.z, q.w); }
+        float x; float y; float z; float w;
     };
     struct float4x4
     {
@@ -199,6 +281,83 @@ namespace SimpleRenderer
             _34 = d;
             _43 = e;
         }
+        void preTranslate(const float x, const float y, const float z) noexcept
+        {
+            _14 += x; _24 += y; _34 += z;
+        }
+        void postScale(const float x, const float y, const float z) noexcept
+        {
+            _11 *= x; _12 *= y; _13 *= z;
+            _21 *= x; _22 *= y; _23 *= z;
+            _31 *= x; _32 *= y; _33 *= z;
+            _41 *= x; _42 *= y; _43 *= z;
+        }
+        static float4x4 createRotationMatrix(const quaternion& q)
+        {
+            float3 axis;
+            float angle;
+            q.getAxisAngle(axis, angle);
+            return createRotationMatrix(axis, angle);
+        }
+        static float4x4 createRotationMatrix(const float3& axis, const float angle)
+        {
+            // (v * r)r(1 - cosθ) + vcosθ + (r X v)sinθ
+            const float3 r = axis.computeNormalized();
+            const float c = ::cosf(angle);
+            const float s = ::sinf(angle);
+            const float rx = r.x;
+            const float ry = r.y;
+            const float rz = r.z;
+            float4x4 result
+            (
+                (1 - c) * rx * rx + c, (1 - c) * ry * rx - (rz * s), (1 - c) * rz * rx + (ry * s), 0,
+                (1 - c) * rx * ry + (rz * s), (1 - c) * ry * ry + c, (1 - c) * rz * ry - (rx * s), 0,
+                (1 - c) * rx * rz - (ry * s), (1 - c) * ry * rz + (rx * s), (1 - c) * rz * rz + c, 0,
+                0, 0, 0, 1
+            );
+            return result;
+        }
+    };
+    struct Transform
+    {
+        float4x4 create_float4x4() const
+        {
+            // SRT matrix for column vector is like below:
+            // SRT = T * R * S
+            // which is the same as below..
+            float4x4 matrix = float4x4::createRotationMatrix(_rotation);
+            matrix.preTranslate(_translation.x, _translation.y, _translation.z);
+            matrix.postScale(_scale.x, _scale.y, _scale.z);
+            return matrix;
+        }
+        void make_from_float4x4(const float4x4 m) noexcept
+        {
+            // SRT Matrix
+            // 
+            // | s_x * r_11  s_y * r_12  s_z * r_13  t_x |
+            // | s_x * r_21  s_y * r_22  s_z * r_23  t_y |
+            // | s_x * r_31  s_y * r_32  s_z * r_33  t_z |
+            // | 0           0           0           1   |
+
+            // s
+            _scale.x = ::sqrtf((m._11 * m._11) + (m._21 * m._21) + (m._31 * m._31));
+            _scale.y = ::sqrtf((m._12 * m._12) + (m._22 * m._22) + (m._32 * m._32));
+            _scale.z = ::sqrtf((m._13 * m._13) + (m._23 * m._23) + (m._33 * m._33));
+
+            // r
+            float4x4 rotationMatrix;
+            rotationMatrix._11 = m._11 / _scale.x; rotationMatrix._12 = m._12 / _scale.y; rotationMatrix._13 = m._13 / _scale.z;
+            rotationMatrix._21 = m._21 / _scale.x; rotationMatrix._22 = m._22 / _scale.y; rotationMatrix._23 = m._23 / _scale.z;
+            rotationMatrix._31 = m._31 / _scale.x; rotationMatrix._32 = m._32 / _scale.y; rotationMatrix._33 = m._33 / _scale.z;
+
+            // t
+            _translation.x = m._14;
+            _translation.y = m._24;
+            _translation.z = m._34;
+        }
+        float3 _scale = float3(1, 1, 1);
+        quaternion _rotation;
+        float3 _translation;
     };
     using Color = float4;
 
