@@ -30,6 +30,7 @@ namespace SimpleRenderer
 #pragma endregion
 
 #pragma region Forward Declaration
+    struct float4;
     struct quaternion;
     class Renderer;
     struct Shader;
@@ -121,13 +122,18 @@ namespace SimpleRenderer
         constexpr float2(float x_, float y_) : x{ x_ }, y{ y_ } { __noop; }
         float& operator[](const uint32 index) { return f[index]; }
         const float& operator[](const uint32 index) const { return f[index]; }
+        float2& operator+=(const float2& rhs) { x += rhs.x; y += rhs.y; return *this; }
+        float2& operator-=(const float2& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
         float2 operator+(const float2& rhs) const { return float2(x + rhs.x, y + rhs.y); }
         float2 operator-(const float2& rhs) const { return float2(x - rhs.x, y - rhs.y); }
+        float2& operator*=(const float s) { x *= s; y *= s; return *this; }
+        float2& operator/=(const float s) { x /= s; y /= s; return *this; }
         float2 operator*(const float s) const { return float2(x * s, y * s); }
         float2 operator/(const float s) const { return float2(x / s, y / s); }
         constexpr float dot(const float2& rhs) const { return x * rhs.x + y * rhs.y; }
         constexpr float lengthSq() const { return dot(*this); }
         float length() const { return ::sqrt(lengthSq()); }
+        void normalize() { *this /= length(); }
         union { struct { float x; float y; }; float f[2]; };
     };
     struct float3
@@ -157,7 +163,9 @@ namespace SimpleRenderer
     struct float4
     {
         constexpr float4() : float4(0, 0, 0, 0) { __noop; }
+        constexpr float4(const float2& rhs) : x{ rhs.x }, y{ rhs.y }, z{ 0 }, w{ 1 } { __noop; }
         constexpr float4(float x_, float y_, float z_, float w_) : x{ x_ }, y{ y_ }, z{ z_ }, w{ w_ } { __noop; }
+        operator float2() const { return float2(x, y); }
         float& operator[](const uint32 index) { return f[index]; }
         const float& operator[](const uint32 index) const { return f[index]; }
         float4 operator+() const { return *this; }
@@ -708,6 +716,14 @@ namespace SimpleRenderer
             }
         }
 
+        static void fillVertexColor(const size_t vertexOffset, std::vector<Vertex>& vertices, const Color& color)
+        {
+            for (size_t i = vertexOffset; i < vertices.size(); i++)
+            {
+                vertices[i]._color = color;
+            }
+        }
+
     private:
         static void pushIndex(std::vector<uint32>& indices, const uint64 index)
         {
@@ -822,7 +838,7 @@ namespace SimpleRenderer
     HRESULT ShaderHeaderSet::Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes)
     {
         const uint32 headerCount = (uint32)_headerNames.size();
-        for (uint32 headerIndex = 0; headerIndex < headerCount; headerIndex++)
+        for (uint32 headerIndex = 0; headerIndex < headerCount; ++headerIndex)
         {
             if (_headerNames[headerIndex] == pFileName)
             {
@@ -942,7 +958,7 @@ namespace SimpleRenderer
         subResource.SysMemSlicePitch = 0;
         if (SUCCEEDED(renderer.getDevice()->CreateTexture2D(&texture2DDescriptor, &subResource, reinterpret_cast<ID3D11Texture2D**>(newResource.ReleaseAndGetAddressOf()))))
         {
-            D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDescriptor;
+            D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDescriptor{};
             shaderResourceViewDescriptor.Format = texture2DDescriptor.Format;
             shaderResourceViewDescriptor.ViewDimension = D3D11_SRV_DIMENSION::D3D11_SRV_DIMENSION_TEXTURE2D;
             shaderResourceViewDescriptor.Texture2D.MipLevels = texture2DDescriptor.MipLevels;
@@ -1371,7 +1387,7 @@ namespace SimpleRenderer
         }
 
         {
-            D3D11_RASTERIZER_DESC rasterizerDescriptor;
+            D3D11_RASTERIZER_DESC rasterizerDescriptor{};
             rasterizerDescriptor.AntialiasedLineEnable = TRUE;
             rasterizerDescriptor.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
             rasterizerDescriptor.DepthBias = 0;
@@ -1439,7 +1455,7 @@ namespace SimpleRenderer
         const float glyphTextureUnit_V = glyphTextureHeight / kFontTextureHeight;
         const float v0 = glyphTextureUnit_V * rowIndex;
         const float v1 = v0 + glyphTextureUnit_V;
-        for (uint32 iter = 0; iter < kFontTextureGlyphCountInRow; iter++)
+        for (uint32 iter = 0; iter < kFontTextureGlyphCountInRow; ++iter)
         {
             _defaultFontData.pushGlyph(DefaultFontGlyphMeta(ch[iter], glyphTextureUnit_U * iter, v0, glyphTextureUnit_U * (iter + 1), v1));
         }
@@ -1465,7 +1481,7 @@ namespace SimpleRenderer
         _defaultFontCBMatrices.createBuffer(renderer, ResourceType::ConstantBuffer, &default_font_cb_matrices, sizeof(default_font_cb_matrices), 1);
 
         byte bytes[kFontTextureByteCount]{};
-        for (uint32 iter = 0; iter < kFontTextureByteCount; iter++)
+        for (uint32 iter = 0; iter < kFontTextureByteCount; ++iter)
         {
             const uint32 bitAt = iter % 8;
             const uint32 byteAt = iter / 8;
