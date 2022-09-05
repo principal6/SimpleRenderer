@@ -122,6 +122,8 @@ namespace SimpleRenderer
         constexpr float2(float x_, float y_) : x{ x_ }, y{ y_ } { __noop; }
         float& operator[](const uint32 index) { return f[index]; }
         const float& operator[](const uint32 index) const { return f[index]; }
+        float2 operator+() const { return *this; }
+        float2 operator-() const { return float2(-x, -y); }
         float2& operator+=(const float2& rhs) { x += rhs.x; y += rhs.y; return *this; }
         float2& operator-=(const float2& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
         float2 operator+(const float2& rhs) const { return float2(x + rhs.x, y + rhs.y); }
@@ -139,7 +141,9 @@ namespace SimpleRenderer
     struct float3
     {
         constexpr float3() : float3(0, 0, 0) { __noop; }
+        constexpr float3(const float2& rhs) : x{ rhs.x }, y{ rhs.y }, z{ 0 } { __noop; }
         constexpr float3(float x_, float y_, float z_) : x{ x_ }, y{ y_ }, z{ z_ } { __noop; }
+        operator float2() const { return float2(x, y); }
         float& operator[](const uint32 index) { return f[index]; }
         const float& operator[](const uint32 index) const { return f[index]; }
         float3 operator+() const { return *this; }
@@ -153,6 +157,7 @@ namespace SimpleRenderer
         float3& operator*=(const float s) { *this = (*this * s); return *this; }
         float3& operator/=(const float s) { *this = (*this / s); return *this; }
         constexpr float dot(const float3& rhs) const { return x * rhs.x + y * rhs.y + z * rhs.z; }
+        constexpr float3 cross(const float3& rhs) const { return float3(y * rhs.z - z * rhs.y, z * rhs.x - x * rhs.z, x * rhs.y - y * rhs.x); }
         constexpr float lengthSq() const { return dot(*this); }
         float length() const { return ::sqrt(lengthSq()); }
         void normalize() { *this /= length(); }
@@ -780,6 +785,7 @@ namespace SimpleRenderer
         ComPtr<ID3D11Texture2D> _depthStencilResource;
         ComPtr<ID3D11DepthStencilView> _depthStencilView;
         ComPtr<ID3D11RasterizerState> _defaultRasterizerState;
+        ComPtr<ID3D11DepthStencilState> _defaultDepthStencilState;
         ComPtr<ID3D11SamplerState> _defaultSamplerState;
         ComPtr<ID3D11BlendState> _defaultBlendState;
 
@@ -1403,6 +1409,19 @@ namespace SimpleRenderer
         }
 
         {
+            D3D11_DEPTH_STENCIL_DESC depthStencilDescriptor;
+            depthStencilDescriptor.DepthEnable = TRUE;
+            depthStencilDescriptor.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS_EQUAL;
+            depthStencilDescriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK::D3D11_DEPTH_WRITE_MASK_ALL;
+            depthStencilDescriptor.StencilEnable = FALSE;
+            if (FAILED(_device->CreateDepthStencilState(&depthStencilDescriptor, _defaultDepthStencilState.ReleaseAndGetAddressOf())))
+            {
+                MINT_LOG_ERROR("Failed to create Depth-Stencil state.");
+                return;
+            }
+        }
+
+        {
             D3D11_VIEWPORT viewport{};
             viewport.Width = _windowSize.x;
             viewport.Height = _windowSize.y;
@@ -1443,6 +1462,7 @@ namespace SimpleRenderer
         }
 
         _deviceContext->OMSetRenderTargets(1, _backBufferRtv.GetAddressOf(), _depthStencilView.Get());
+        _deviceContext->OMSetDepthStencilState(_defaultDepthStencilState.Get(), 0);
 
         createDevice_createDefaultFontData();
     }
