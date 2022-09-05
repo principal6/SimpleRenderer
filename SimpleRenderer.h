@@ -185,10 +185,14 @@ namespace SimpleRenderer
         quaternion(float x_, float y_, float z_, float w_) : x{ x_ }, y{ y_ }, z{ z_ }, w{ w_ } { __noop; }
         quaternion& operator*=(const quaternion& rhs) noexcept
         {
-            w = +w * rhs.w - x * rhs.x - y * rhs.y - z * rhs.z;
-            x = +w * rhs.x + x * rhs.w + y * rhs.z - z * rhs.y;
-            y = +w * rhs.y - x * rhs.z + y * rhs.w + z * rhs.x;
-            z = +w * rhs.z + x * rhs.y - y * rhs.x + z * rhs.w;
+            float x_ = +w * rhs.x + x * rhs.w + y * rhs.z - z * rhs.y;
+            float y_ = +w * rhs.y - x * rhs.z + y * rhs.w + z * rhs.x;
+            float z_ = +w * rhs.z + x * rhs.y - y * rhs.x + z * rhs.w;
+            float w_ = +w * rhs.w - x * rhs.x - y * rhs.y - z * rhs.z;
+            x = x_;
+            y = y_;
+            z = z_;
+            w = w_;
             return *this;
         }
         float4 rotate(const float4& v) const noexcept
@@ -1272,14 +1276,17 @@ namespace SimpleRenderer
 
     void Renderer::endRendering()
     {
-        _defaultFontVertexBuffer.update(*this, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
-        _defaultFontIndexBuffer.update(*this, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
+        if (_defaultFontVertices.empty() == false)
+        {
+            _defaultFontVertexBuffer.update(*this, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
+            _defaultFontIndexBuffer.update(*this, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
 
-        bindDefaultFontData();
+            bindDefaultFontData();
 
-        drawIndexed((uint32)_defaultFontIndices.size());
-        _defaultFontVertices.clear();
-        _defaultFontIndices.clear();
+            drawIndexed((uint32)_defaultFontIndices.size());
+            _defaultFontVertices.clear();
+            _defaultFontIndices.clear();
+        }
 
         _swapChain->Present(0, 0);
     }
