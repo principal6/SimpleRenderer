@@ -605,7 +605,7 @@ int main()
             renderer.bind_ShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
             renderer.draw_indexed((uint32)indices.size());
 
-            renderer.draw_text(white_color, "GJK Algorithm Test", float2(10, 10));
+            renderer.draw_text(Color(0,1,1,1), "GJK Algorithm Test", float2(10, 10));
             renderer.draw_text((selection == 0 ? yellow_color : white_color), "1: shape A", float2(10, 40));
             renderer.draw_text((selection == 1 ? yellow_color : white_color), "2: shape B", float2(10, 60));
             renderer.draw_text((selection == 2 ? yellow_color : white_color), "3: initial direction", float2(10, 80));
