@@ -453,8 +453,8 @@ int main()
 
 
     float2 positions[2]{};
-    positions[0] = float2(300, 150);
-    positions[1] = float2(400, 150);
+    positions[0] = float2(400, 150);
+    positions[1] = float2(500, 150);
     float2 positions_prev[2]{};
     float thetas[3]{};
     float thetas_prev[3]{};
@@ -484,6 +484,8 @@ int main()
     uint32 mode = 0;
     uint32 selection = 0;
     float2 initial_direction = float2(1, 0);
+    const Color white_color = Color(1, 1, 1, 1);
+    const Color yellow_color = Color(1, 1, 0, 1);
     while (renderer.is_running())
     {
         if (renderer.get_keyboard_char() == 'w')
@@ -572,7 +574,7 @@ int main()
 
                 GJK::DebugData debugData;
                 const bool intersected = GJK::intersects(shapes[0], shapes[1], initial_direction, &debugData);
-                const Color shape_color = (intersected ? Color(0, 1, 0, 1) : Color(1, 1, 1, 1));
+                const Color shape_color = (intersected ? Color(0, 1, 0, 1) : white_color);
                 MeshGenerator<VS_INPUT>::push_2D_circle(shape_color, shapes[0]._center, 2.0f, 16, vertices, indices);
                 MeshGenerator<VS_INPUT>::push_2D_circle(shape_color, shapes[1]._center, 2.0f, 16, vertices, indices);
                 shapes[0].draw_line_semgments_to(shape_color, vertices, indices);
@@ -603,14 +605,15 @@ int main()
             renderer.bind_ShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
             renderer.draw_indexed((uint32)indices.size());
 
-            renderer.draw_text("GJK Algorithm Test", float2(10, 10));
-            renderer.draw_text("q: --gjk_step", float2(10, 40));
-            renderer.draw_text("w: ++gjk_step", float2(10, 60));
-            renderer.draw_text("e: translate", float2(10, 80));
-            renderer.draw_text("r: rotate", float2(10, 100));
-            renderer.draw_text("1: shape A", float2(10, 120));
-            renderer.draw_text("2: shape B", float2(10, 140));
-            renderer.draw_text("3: initial direction", float2(10, 160));
+            renderer.draw_text(white_color, "GJK Algorithm Test", float2(10, 10));
+            renderer.draw_text((selection == 0 ? yellow_color : white_color), "1: shape A", float2(10, 40));
+            renderer.draw_text((selection == 1 ? yellow_color : white_color), "2: shape B", float2(10, 60));
+            renderer.draw_text((selection == 2 ? yellow_color : white_color), "3: initial direction", float2(10, 80));
+            renderer.draw_text((mode == 0 ? yellow_color : white_color), "e: translate", float2(10, 100));
+            renderer.draw_text((mode == 1 ? yellow_color : white_color), "r: rotate", float2(10, 120));
+            renderer.draw_text(white_color, "current gjk_max_step: " + std::to_string(GJK::g_max_step), float2(10, 160));
+            renderer.draw_text(white_color, "q: --gjk_max_step", float2(10, 180));
+            renderer.draw_text(white_color, "w: ++gjk_max_step", float2(10, 200));
 
             //char buffer[8]{};
             //for (size_t i = 0; i < shapeMinkowski._points.size(); ++i)
