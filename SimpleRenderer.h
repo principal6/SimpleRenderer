@@ -7,6 +7,7 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <string>
 #include <unordered_map>
 #include <d3dcompiler.h>
 
@@ -457,7 +458,7 @@ namespace SimpleRenderer
         {
             float4 sampled = g_texture0.Sample(g_sampler0, input.texcoord.xy);
             float4 sampledBold = sqrt(sqrt(sampled.r));
-            return float4(sampledBold);
+            return float4(sampledBold) * input.color;
         }
     )";
 
@@ -800,7 +801,7 @@ namespace SimpleRenderer
         bool begin_rendering();
         void draw(const uint32 vertexCount);
         void draw_indexed(const uint32 indexCount);
-        void draw_text(const std::string& text, const float2& position);
+        void draw_text(const Color& color, const std::string& text, const float2& position);
         void end_rendering();
 
     public:
@@ -1346,7 +1347,7 @@ namespace SimpleRenderer
         _deviceContext->DrawIndexed(indexCount, 0, 0);
     }
 
-    void Renderer::draw_text(const std::string& text, const float2& position)
+    void Renderer::draw_text(const Color& color, const std::string& text, const float2& position)
     {
         if (text.empty() == true)
         {
@@ -1365,7 +1366,7 @@ namespace SimpleRenderer
             const float u1 = glyphMeta._u1;
             const float v0 = glyphMeta._v0;
             const float v1 = glyphMeta._v1;
-            MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(Color(), position + sizeUnit * 0.5f + positionUnit * (float)chCount, sizeUnit, 0.0f, _defaultFontVertices, _defaultFontIndices);
+            MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(color, position + sizeUnit * 0.5f + positionUnit * (float)chCount, sizeUnit, 0.0f, _defaultFontVertices, _defaultFontIndices);
             _defaultFontVertices[_defaultFontVertices.size() - 4]._texcoord = float2(u0, v0);
             _defaultFontVertices[_defaultFontVertices.size() - 3]._texcoord = float2(u0, v1);
             _defaultFontVertices[_defaultFontVertices.size() - 2]._texcoord = float2(u1, v1);
