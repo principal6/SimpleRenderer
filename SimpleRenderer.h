@@ -612,7 +612,7 @@ namespace SimpleRenderer
     class MeshGenerator
     {
     public:
-        static void push_3D_triangle(const float4& a, const float4& b, const float4& c, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+        static void push_3D_triangle(const Color& color, const float4& a, const float4& b, const float4& c, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
         {
             const uint64 vertexBase = vertices.size();
             vertices.resize(vertexBase + 3);
@@ -621,15 +621,18 @@ namespace SimpleRenderer
             indices.reserve(indexBase + 3);
 
             vertices[vertexBase + 0]._position = a;
+            vertices[vertexBase + 0]._color = color;
             vertices[vertexBase + 1]._position = b;
+            vertices[vertexBase + 1]._color = color;
             vertices[vertexBase + 2]._position = c;
+            vertices[vertexBase + 2]._color = color;
 
             push_index(indices, vertexBase + 0);
             push_index(indices, vertexBase + 1);
             push_index(indices, vertexBase + 2);
         }
 
-        static void push_2D_triangle(const float2& a, const float2& b, const float2& c, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+        static void push_2D_triangle(const Color& color, const float2& a, const float2& b, const float2& c, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
         {
             const uint64 vertexBase = vertices.size();
             vertices.resize(vertexBase + 3);
@@ -638,15 +641,18 @@ namespace SimpleRenderer
             indices.reserve(indexBase + 3);
 
             vertices[vertexBase + 0]._position = float4(a.x, a.y, 0, 1);
+            vertices[vertexBase + 0]._color = color;
             vertices[vertexBase + 1]._position = float4(b.x, b.y, 0, 1);
+            vertices[vertexBase + 1]._color = color;
             vertices[vertexBase + 2]._position = float4(c.x, c.y, 0, 1);
+            vertices[vertexBase + 2]._color = color;
 
             push_index(indices, vertexBase + 0);
             push_index(indices, vertexBase + 1);
             push_index(indices, vertexBase + 2);
         }
 
-        static void push_2D_rectangle(const float2& centerPosition, const float2& size, const float rotationAngle, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+        static void push_2D_rectangle(const Color& color, const float2& centerPosition, const float2& size, const float rotationAngle, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
         {
             const uint64 vertexBase = vertices.size();
             vertices.resize(vertexBase + 4);
@@ -660,9 +666,13 @@ namespace SimpleRenderer
             const float2 rotatedX = float2(+cosTheta, -sinTheta);
             const float2 rotatedY = float2(+sinTheta, +cosTheta);
             vertices[vertexBase + 0]._position.set_point(centerPosition - rotatedX * halfSize.x - rotatedY * halfSize.y);
+            vertices[vertexBase + 0]._color = color;
             vertices[vertexBase + 1]._position.set_point(centerPosition - rotatedX * halfSize.x + rotatedY * halfSize.y);
+            vertices[vertexBase + 1]._color = color;
             vertices[vertexBase + 2]._position.set_point(centerPosition + rotatedX * halfSize.x + rotatedY * halfSize.y);
+            vertices[vertexBase + 2]._color = color;
             vertices[vertexBase + 3]._position.set_point(centerPosition + rotatedX * halfSize.x - rotatedY * halfSize.y);
+            vertices[vertexBase + 3]._color = color;
 
             push_index(indices, vertexBase + 0);
             push_index(indices, vertexBase + 1);
@@ -673,7 +683,7 @@ namespace SimpleRenderer
             push_index(indices, vertexBase + 3);
         }
 
-        static void push_2D_circle(const float2& centerPosition, float radius, uint32 sideCount, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+        static void push_2D_circle(const Color& color, const float2& centerPosition, float radius, uint32 sideCount, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
         {
             radius = max(radius, 1.0f);
             sideCount = max(sideCount, 4);
@@ -684,12 +694,14 @@ namespace SimpleRenderer
             indices.reserve(indexBase + static_cast<uint64>(sideCount) * 3);
 
             vertices[vertexBase]._position = float4(centerPosition.x, centerPosition.y, 0, 1);
+            vertices[vertexBase]._color = color;
             for (uint32 sideIndex = 0; sideIndex < sideCount; ++sideIndex)
             {
                 const float theta = (k2Pi * sideIndex) / sideCount;
                 const float x = radius * ::cos(theta);
                 const float y = -radius * ::sin(theta);
                 vertices[vertexBase + sideIndex + 1]._position = float4(centerPosition.x + x, centerPosition.y + y, 0, 1);
+                vertices[vertexBase + sideIndex + 1]._color = color;
 
                 push_index(indices, vertexBase + 0);
                 push_index(indices, vertexBase + sideIndex + 1);
@@ -698,7 +710,7 @@ namespace SimpleRenderer
             indices[indices.size() - 1] = static_cast<uint32>(vertexBase + 1);
         }
 
-        static void push_2D_lineSegment(const float2& a, const float2& b, float thickness, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+        static void push_2D_lineSegment(const Color& color, const float2& a, const float2& b, float thickness, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
         {
             thickness = max(thickness, 1.0f);
 
@@ -712,7 +724,7 @@ namespace SimpleRenderer
             const float2 direction = ab / l;
             const float rotationAngle = ::atan2f(-direction.y, direction.x);
             const float2 m = (a + b) * 0.5f;
-            push_2D_rectangle(m, float2(l, thickness), rotationAngle, vertices, indices);
+            push_2D_rectangle(color, m, float2(l, thickness), rotationAngle, vertices, indices);
         }
 
         static void fill_vertex_color(std::vector<Vertex>& vertices, const Color& color)
@@ -758,7 +770,7 @@ namespace SimpleRenderer
             bool _is_R_button_released = false;
             float2 _L_pressed_position;
             float2 _position;
-            
+
             bool _is_L_button_down = false;
         };
         struct KeyboardState
@@ -1353,7 +1365,7 @@ namespace SimpleRenderer
             const float u1 = glyphMeta._u1;
             const float v0 = glyphMeta._v0;
             const float v1 = glyphMeta._v1;
-            MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(position + sizeUnit * 0.5f + positionUnit * (float)chCount, sizeUnit, 0.0f, _defaultFontVertices, _defaultFontIndices);
+            MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(Color(), position + sizeUnit * 0.5f + positionUnit * (float)chCount, sizeUnit, 0.0f, _defaultFontVertices, _defaultFontIndices);
             _defaultFontVertices[_defaultFontVertices.size() - 4]._texcoord = float2(u0, v0);
             _defaultFontVertices[_defaultFontVertices.size() - 3]._texcoord = float2(u0, v1);
             _defaultFontVertices[_defaultFontVertices.size() - 2]._texcoord = float2(u1, v1);
@@ -1587,7 +1599,7 @@ namespace SimpleRenderer
         }
         _defaultFontTexture.create_texture2D(renderer, TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight);
 
-        MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(float2(256, 240), float2(512, 480), 0.0f, _defaultFontVertices, _defaultFontIndices);
+        MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(Color(), float2(256, 240), float2(512, 480), 0.0f, _defaultFontVertices, _defaultFontIndices);
         _defaultFontVertices[0]._texcoord = float2(0, 0);
         _defaultFontVertices[1]._texcoord = float2(1, 0);
         _defaultFontVertices[2]._texcoord = float2(0, 1);

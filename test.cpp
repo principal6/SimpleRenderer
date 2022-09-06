@@ -99,7 +99,7 @@ namespace GJK
                 _points[i].y = rotated.y;
             }
         }
-        void draw_line_semgments_to(std::vector<VS_INPUT>& vertices, std::vector<uint32>& indices)
+        void draw_line_semgments_to(const Color& color, std::vector<VS_INPUT>& vertices, std::vector<uint32>& indices)
         {
             if (_points.size() <= 1)
             {
@@ -109,10 +109,10 @@ namespace GJK
             for (size_t iter = 0; iter < _points.size(); iter++)
             {
                 const size_t prev = (iter == 0 ? _points.size() - 1 : iter - 1);
-                MeshGenerator<VS_INPUT>::push_2D_lineSegment(_center + _points[iter], _center + _points[prev], 1, vertices, indices);
+                MeshGenerator<VS_INPUT>::push_2D_lineSegment(color, _center + _points[iter], _center + _points[prev], 1, vertices, indices);
             }
         }
-        void draw_points_to(std::vector<VS_INPUT>& vertices, std::vector<uint32>& indices)
+        void draw_points_to(const Color& color, std::vector<VS_INPUT>& vertices, std::vector<uint32>& indices)
         {
             if (_points.size() <= 1)
             {
@@ -121,9 +121,9 @@ namespace GJK
 
             for (size_t iter = 0; iter < _points.size(); iter++)
             {
-                MeshGenerator<VS_INPUT>::push_2D_circle(_center + _points[iter], 2.0f, 8, vertices, indices);
+                MeshGenerator<VS_INPUT>::push_2D_circle(color, _center + _points[iter], 2.0f, 8, vertices, indices);
             }
-            MeshGenerator<VS_INPUT>::push_2D_circle(_center, 4.0f, 8, vertices, indices);
+            MeshGenerator<VS_INPUT>::push_2D_circle(color, _center, 4.0f, 8, vertices, indices);
         }
         void make_Minkowski_difference_shape(const Shape2D& a, const Shape2D& b)
         {
@@ -249,16 +249,16 @@ namespace GJK
         const float2& a() const { return _points[_validPointCount - 1]; }
         const float2& b() const { return _points[_validPointCount - 2]; }
         const float2& c() const { return _points[_validPointCount - 3]; }
-        void draw_to(const float2& offset, std::vector<VS_INPUT>& vertices, std::vector<uint32>& indices)
+        void draw_to(const Color& color, const float2& offset, std::vector<VS_INPUT>& vertices, std::vector<uint32>& indices)
         {
-            MeshGenerator<VS_INPUT>::push_2D_circle(offset, 4.0f, 8, vertices, indices);
+            MeshGenerator<VS_INPUT>::push_2D_circle(color, offset, 4.0f, 8, vertices, indices);
 
             for (size_t i = 0; i < _validPointCount; i++)
             {
-                MeshGenerator<VS_INPUT>::push_2D_circle(offset + _points[i], 4.0f, 8, vertices, indices);
+                MeshGenerator<VS_INPUT>::push_2D_circle(color, offset + _points[i], 4.0f, 8, vertices, indices);
 
                 const size_t prev = (i == 0 ? _validPointCount - 1 : i - 1);
-                MeshGenerator<VS_INPUT>::push_2D_lineSegment(offset + _points[i], offset + _points[prev], 2.0f, vertices, indices);
+                MeshGenerator<VS_INPUT>::push_2D_lineSegment(color, offset + _points[i], offset + _points[prev], 2.0f, vertices, indices);
             }
         }
         float2 _points[3];
@@ -540,7 +540,7 @@ int main()
                 {
                     positions[selection].x = positions_prev[selection].x + renderer.get_mouse_move_delta().x;
                     positions[selection].y = positions_prev[selection].y + renderer.get_mouse_move_delta().y;
-                    
+
                     shapes_source[selection]._center = positions[selection];
                     shapes[selection]._center = shapes_source[selection]._center;
                 }
@@ -570,27 +570,25 @@ int main()
                 vertices.clear();
                 indices.clear();
 
-                MeshGenerator<VS_INPUT>::push_2D_circle(shapes[0]._center, 2.0f, 16, vertices, indices);
-                MeshGenerator<VS_INPUT>::push_2D_circle(shapes[1]._center, 2.0f, 16, vertices, indices);
-                shapes[0].draw_line_semgments_to(vertices, indices);
-                shapes[1].draw_line_semgments_to(vertices, indices);
-                shape_Minkowski.draw_points_to(vertices, indices);
-                shape_Minkowski.draw_line_semgments_to(vertices, indices);
-                MeshGenerator<VS_INPUT>::fill_vertex_color(vertices, float4(1, 1, 1, 1));
+                GJK::DebugData debugData;
+                const bool intersected = GJK::intersects(shapes[0], shapes[1], initial_direction, &debugData);
+                const Color shape_color = (intersected ? Color(0, 1, 0, 1) : Color(1, 1, 1, 1));
+                MeshGenerator<VS_INPUT>::push_2D_circle(shape_color, shapes[0]._center, 2.0f, 16, vertices, indices);
+                MeshGenerator<VS_INPUT>::push_2D_circle(shape_color, shapes[1]._center, 2.0f, 16, vertices, indices);
+                shapes[0].draw_line_semgments_to(shape_color, vertices, indices);
+                shapes[1].draw_line_semgments_to(shape_color, vertices, indices);
+                shape_Minkowski.draw_points_to(shape_color, vertices, indices);
+                shape_Minkowski.draw_line_semgments_to(shape_color, vertices, indices);
 
                 {
-                    const size_t vertex_offset = vertices.size();
-                    GJK::DebugData debugData;
-                    GJK::intersects(shapes[0], shapes[1], initial_direction, &debugData);
+                    debugData._simplex.draw_to(float4(1, 0, 1, 1), shape_Minkowski._center, vertices, indices);
 
-                    debugData._simplex.draw_to(shape_Minkowski._center, vertices, indices);
                     const float2& support_a = shapes[0].support(debugData._direction);
                     const float2& support_b = shapes[1].support(-debugData._direction);
-                    MeshGenerator<VS_INPUT>::push_2D_lineSegment(shapes[0]._center, shapes[0]._center + debugData._direction * 40.0f, 2.0f, vertices, indices);
-                    MeshGenerator<VS_INPUT>::push_2D_lineSegment(shapes[1]._center, shapes[1]._center - debugData._direction * 40.0f, 2.0f, vertices, indices);
-                    MeshGenerator<VS_INPUT>::push_2D_circle(support_a, 4.0f, 8, vertices, indices);
-                    MeshGenerator<VS_INPUT>::push_2D_circle(support_b, 4.0f, 8, vertices, indices);
-                    MeshGenerator<VS_INPUT>::fill_vertex_color(vertex_offset, vertices, float4(1, 0, 1, 1));
+                    MeshGenerator<VS_INPUT>::push_2D_lineSegment(float4(1, 0, 1, 1), shapes[0]._center, shapes[0]._center + debugData._direction * 40.0f, 2.0f, vertices, indices);
+                    MeshGenerator<VS_INPUT>::push_2D_lineSegment(float4(1, 0, 1, 1), shapes[1]._center, shapes[1]._center - debugData._direction * 40.0f, 2.0f, vertices, indices);
+                    MeshGenerator<VS_INPUT>::push_2D_circle(float4(1, 0, 1, 1), support_a, 4.0f, 8, vertices, indices);
+                    MeshGenerator<VS_INPUT>::push_2D_circle(float4(1, 0, 1, 1), support_b, 4.0f, 8, vertices, indices);
                 }
 
                 vertexBuffer.update(renderer, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
@@ -604,6 +602,8 @@ int main()
             renderer.bind_input(indexBuffer, 0);
             renderer.bind_ShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
             renderer.draw_indexed((uint32)indices.size());
+
+            renderer.draw_text("GJK Algorithm Test", float2(10, 10));
 
             //char buffer[8]{};
             //for (size_t i = 0; i < shapeMinkowski._points.size(); ++i)
