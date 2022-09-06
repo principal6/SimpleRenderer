@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <d3d11.h>
 #include <wrl.h>
@@ -119,19 +119,20 @@ namespace SimpleRenderer
     struct float2
     {
         constexpr float2() : float2(0, 0) { __noop; }
+        constexpr float2(float s) : x{ s }, y{ s } { __noop; }
         constexpr float2(float x_, float y_) : x{ x_ }, y{ y_ } { __noop; }
         float& operator[](const uint32 index) { return f[index]; }
         const float& operator[](const uint32 index) const { return f[index]; }
-        float2 operator+() const { return *this; }
-        float2 operator-() const { return float2(-x, -y); }
+        constexpr float2 operator+() const { return *this; }
+        constexpr float2 operator-() const { return float2(-x, -y); }
         float2& operator+=(const float2& rhs) { x += rhs.x; y += rhs.y; return *this; }
         float2& operator-=(const float2& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
-        float2 operator+(const float2& rhs) const { return float2(x + rhs.x, y + rhs.y); }
-        float2 operator-(const float2& rhs) const { return float2(x - rhs.x, y - rhs.y); }
+        constexpr float2 operator+(const float2& rhs) const { return float2(x + rhs.x, y + rhs.y); }
+        constexpr float2 operator-(const float2& rhs) const { return float2(x - rhs.x, y - rhs.y); }
         float2& operator*=(const float s) { x *= s; y *= s; return *this; }
         float2& operator/=(const float s) { x /= s; y /= s; return *this; }
-        float2 operator*(const float s) const { return float2(x * s, y * s); }
-        float2 operator/(const float s) const { return float2(x / s, y / s); }
+        constexpr float2 operator*(const float s) const { return float2(x * s, y * s); }
+        constexpr float2 operator/(const float s) const { return float2(x / s, y / s); }
         constexpr float dot(const float2& rhs) const { return x * rhs.x + y * rhs.y; }
         constexpr float lengthSq() const { return dot(*this); }
         float length() const { return ::sqrt(lengthSq()); }
@@ -738,6 +739,12 @@ namespace SimpleRenderer
 
     class Renderer final
     {
+        struct MouseState
+        {
+            bool _isLButtonUp = false;
+            bool _isRButtonUp = false;
+        };
+
     public:
         Renderer(const float2& windowSize, const Color& clearColor) : _windowSize{ windowSize }, _clearColor{ clearColor } { if (createWindow()) createDevice(); }
         ~Renderer() { destroyWindow(); }
@@ -762,6 +769,11 @@ namespace SimpleRenderer
     public:
         ID3D11Device* getDevice() const { return _device.Get(); }
         ID3D11DeviceContext* getDeviceContext() const { return _deviceContext.Get(); }
+
+    public:
+        bool isMouseLeftButtonUp() const { return _mouseState._isLButtonUp; }
+        bool isMouseRightButtonUp() const { return _mouseState._isRButtonUp; }
+        char getCharState() const { return _charState; }
 
     private:
         bool createWindow();
@@ -809,6 +821,10 @@ namespace SimpleRenderer
         std::vector<DEFAULT_FONT_VS_INPUT> _defaultFontVertices;
         std::vector<uint32> _defaultFontIndices;
         float2 _defaultFontScale = float2(1.25f, 2.25f);
+
+    private:
+        MouseState _mouseState;
+        char _charState = 0;
     };
 
 
@@ -1118,10 +1134,28 @@ namespace SimpleRenderer
     bool Renderer::isRunning()
     {
         if (!_hWnd) return false;
+
+        _charState = 0;
+        _mouseState._isLButtonUp = false;
+        _mouseState._isRButtonUp = false;
+
         MSG msg{};
         if (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) == false) { return true; }
         switch (msg.message)
         {
+        case WM_CHAR:
+            _charState = (char)msg.wParam;
+            break;
+        case WM_LBUTTONUP:
+        {
+            _mouseState._isLButtonUp = true;
+            break;
+        }
+        case WM_RBUTTONUP:
+        {
+            _mouseState._isRButtonUp = true;
+            break;
+        }
         case WM_QUIT:
             destroyWindow();
             return false;
