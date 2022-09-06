@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <d3d11.h>
 #include <wrl.h>
@@ -741,8 +741,21 @@ namespace SimpleRenderer
     {
         struct MouseState
         {
+            void clear()
+            {
+                _isLButtonUp = false;
+                _isRButtonUp = false;
+            }
             bool _isLButtonUp = false;
             bool _isRButtonUp = false;
+        };
+        struct KeyboardState
+        {
+            void clear()
+            {
+                _char = 0;
+            }
+            char _char = 0;
         };
 
     public:
@@ -773,7 +786,7 @@ namespace SimpleRenderer
     public:
         bool isMouseLeftButtonUp() const { return _mouseState._isLButtonUp; }
         bool isMouseRightButtonUp() const { return _mouseState._isRButtonUp; }
-        char getCharState() const { return _charState; }
+        char getKeyboardChar() const { return _keyboardState._char; }
 
     private:
         bool createWindow();
@@ -824,7 +837,7 @@ namespace SimpleRenderer
 
     private:
         MouseState _mouseState;
-        char _charState = 0;
+        KeyboardState _keyboardState;
     };
 
 
@@ -1135,16 +1148,15 @@ namespace SimpleRenderer
     {
         if (!_hWnd) return false;
 
-        _charState = 0;
-        _mouseState._isLButtonUp = false;
-        _mouseState._isRButtonUp = false;
+        _keyboardState.clear();
+        _mouseState.clear();
 
         MSG msg{};
         if (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) == false) { return true; }
         switch (msg.message)
         {
         case WM_CHAR:
-            _charState = (char)msg.wParam;
+            _keyboardState._char = (char)msg.wParam;
             break;
         case WM_LBUTTONUP:
         {

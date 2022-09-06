@@ -1,4 +1,4 @@
-#include "SimpleRenderer.h"
+﻿#include "SimpleRenderer.h"
 
 #include <algorithm>
 
@@ -522,11 +522,11 @@ int main()
             renderer.bindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
             renderer.drawIndexed((uint32)indices.size());
 
-            if (renderer.getCharState() == '2')
+            if (renderer.getKeyboardChar() == '2')
             {
                 ++GJK::g_max_step;
             }
-            else if (renderer.getCharState() == '1')
+            else if (renderer.getKeyboardChar() == '1')
             {
                 if (GJK::g_max_step > 0)
                 {
