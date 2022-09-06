@@ -473,7 +473,7 @@ int main()
     shapes[0] = shapes_source[0];
     shapes[1] = shapes_source[1];
     GJK::Shape2D shape_Minkowski;
-    shape_Minkowski._center = kScreenSize * 0.5f + float2(100, 0);
+    shape_Minkowski._center = kScreenSize * 0.5f + float2(100, 100);
 
     Resource vertexBuffer;
     vertexBuffer._type = ResourceType::VertexBuffer;
