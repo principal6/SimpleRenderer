@@ -199,6 +199,7 @@ namespace GJK
                     else
                     {
                         min.y = _points[i].y;
+                        min.x = _points[i].x;
                         result = i;
                     }
                 }
@@ -211,7 +212,7 @@ namespace GJK
             const float2& startPoint = _points[startPointIndex];
             struct AngleIndex
             {
-                AngleIndex(const float theta, const size_t index) : _theta{ theta }, _index{ index } {__noop; }
+                AngleIndex(const float theta, const size_t index) : _theta{ theta }, _index{ index } { __noop; }
                 float _theta = 0.0f;
                 size_t _index = 0;
                 bool operator<(const AngleIndex& rhs) const { return _theta < rhs._theta; }
@@ -375,12 +376,12 @@ namespace GJK
         Simplex _simplex;
         float2 _direction;
     };
-    bool intersects(const Shape2D& shape_a, const Shape2D& shape_b, DebugData* const outDebugData = nullptr)
+    bool intersects(const Shape2D& shape_a, const Shape2D& shape_b, const float2& initialDirection, DebugData* const outDebugData = nullptr)
     {
         size_t step = 0;
         bool result = true;
         Simplex simplex;
-        float2 direction = float2(1, 0);
+        float2 direction = initialDirection;
         float2 Minkowski_support = support(shape_a, shape_b, direction);
         simplex.append(Minkowski_support);
         if (step < g_max_step)
@@ -450,78 +451,129 @@ int main()
     //cb_matrices._projectionMatrix.make_perspective_projection_matrix(kPi * 0.25f, 0.001f, 1000.0f, kScreenSize.x / kScreenSize.y);
     vscbMatrices.create_buffer(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
 
-    std::vector<VS_INPUT> vertices;
-    std::vector<uint32> indices;
-    float shape_a_theta = 0.0f;
-    float shape_a_theta_prev = 0.0f;
-    GJK::Shape2D shape_a_original;
-    shape_a_original._center = float2(100, 120);
-    shape_a_original._points.push_back(float2(-20, -45));
-    shape_a_original._points.push_back(float2(-50, 0));
-    shape_a_original._points.push_back(float2(-10, 30));
-    shape_a_original._points.push_back(float2(30, 20));
-    shape_a_original._points.push_back(float2(50, -10));
-    GJK::Shape2D shape_a = shape_a_original;
-    shape_a.rotate(shape_a_theta);
-    shape_a.draw_line_semgments_to(vertices, indices);
-    MeshGenerator<VS_INPUT>::push_2D_circle(shape_a._center, 2.0f, 16, vertices, indices);
-    GJK::Shape2D shape_b;
-    shape_b._center = float2(200, 100);
-    shape_b._points.push_back(float2(80, -50));
-    shape_b._points.push_back(float2(-80, -50));
-    shape_b._points.push_back(float2(-80, 50));
-    shape_b._points.push_back(float2(80, 50));
-    shape_b.rotate(kPi * 0.125f);
-    shape_b.draw_line_semgments_to(vertices, indices);
-    MeshGenerator<VS_INPUT>::push_2D_circle(shape_b._center, 2.0f, 16, vertices, indices);
+
+    float2 positions[2]{};
+    positions[0] = float2(100, 150);
+    positions[1] = float2(200, 150);
+    float2 positions_prev[2]{};
+    float thetas[3]{};
+    float thetas_prev[3]{};
+    GJK::Shape2D shapes_source[2];
+    shapes_source[0]._center = positions[0];
+    shapes_source[0]._points.push_back(float2(-20, -45));
+    shapes_source[0]._points.push_back(float2(-50, 0));
+    shapes_source[0]._points.push_back(float2(-10, 30));
+    shapes_source[0]._points.push_back(float2(30, 20));
+    shapes_source[0]._points.push_back(float2(50, -10));
+    shapes_source[1]._center = positions[1];
+    shapes_source[1]._points.push_back(float2(80, -50));
+    shapes_source[1]._points.push_back(float2(-80, -50));
+    shapes_source[1]._points.push_back(float2(-80, 50));
+    GJK::Shape2D shapes[2];
+    shapes[0] = shapes_source[0];
+    shapes[1] = shapes_source[1];
     GJK::Shape2D shape_Minkowski;
-    shape_Minkowski._center = kScreenSize * 0.5f;
-    shape_Minkowski.make_Minkowski_difference_shape(shape_a, shape_b);
-    shape_Minkowski.draw_points_to(vertices, indices);
-    shape_Minkowski.draw_line_semgments_to(vertices, indices);
-    MeshGenerator<VS_INPUT>::fill_vertex_color(vertices, float4(1, 1, 1, 1));
+    shape_Minkowski._center = kScreenSize * 0.5f + float2(100, 0);
 
     Resource vertexBuffer;
+    vertexBuffer._type = ResourceType::VertexBuffer;
     Resource indexBuffer;
-    vertexBuffer.create_buffer(renderer, ResourceType::VertexBuffer, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
-    indexBuffer.create_buffer(renderer, ResourceType::IndexBuffer, &indices[0], sizeof(uint32), (uint32)indices.size());
-
+    indexBuffer._type = ResourceType::IndexBuffer;
+    std::vector<VS_INPUT> vertices;
+    std::vector<uint32> indices;
+    uint32 mode = 0;
+    uint32 selection = 0;
+    float2 initial_direction = float2(1, 0);
     while (renderer.is_running())
     {
-        if (renderer.get_keyboard_char() == '2')
+        if (renderer.get_keyboard_char() == 'w')
         {
             ++GJK::g_max_step;
         }
-        else if (renderer.get_keyboard_char() == '1')
+        else if (renderer.get_keyboard_char() == 'q')
         {
             if (GJK::g_max_step > 0)
             {
                 --GJK::g_max_step;
             }
         }
+        else if (renderer.get_keyboard_char() == 'e')
+        {
+            mode = 0;
+        }
+        else if (renderer.get_keyboard_char() == 'r')
+        {
+            mode = 1;
+        }
+        else if (renderer.get_keyboard_char() == '1')
+        {
+            selection = 0;
+        }
+        else if (renderer.get_keyboard_char() == '2')
+        {
+            selection = 1;
+        }
+        else if (renderer.get_keyboard_char() == '3')
+        {
+            selection = 2;
+        }
 
         if (renderer.is_mouse_L_button_pressed())
         {
-            shape_a_theta_prev = shape_a_theta;
+            if (mode == 0)
+            {
+                if (selection <= 1)
+                {
+                    positions_prev[selection] = positions[selection];
+                }
+            }
+            else
+            {
+                thetas_prev[selection] = thetas[selection];
+            }
         }
         if (renderer.is_mouse_L_button_down())
         {
-            const float theta = (renderer.get_mouse_move_delta().x + renderer.get_mouse_move_delta().y) * 0.03125f;
-            shape_a_theta = shape_a_theta_prev + theta;
-            
-            shape_a = shape_a_original;
-            shape_a.rotate(shape_a_theta);
-
-            shape_Minkowski.make_Minkowski_difference_shape(shape_a, shape_b);
+            if (mode == 0)
+            {
+                if (selection <= 1)
+                {
+                    positions[selection].x = positions_prev[selection].x + renderer.get_mouse_move_delta().x;
+                    positions[selection].y = positions_prev[selection].y + renderer.get_mouse_move_delta().y;
+                    
+                    shapes_source[selection]._center = positions[selection];
+                    shapes[selection]._center = shapes_source[selection]._center;
+                }
+            }
+            else
+            {
+                const float theta = (renderer.get_mouse_move_delta().x + renderer.get_mouse_move_delta().y) * 0.03125f;
+                thetas[selection] = thetas_prev[selection] + theta;
+                if (selection <= 1)
+                {
+                    shapes[selection] = shapes_source[selection];
+                    shapes[selection].rotate(thetas[selection]);
+                }
+                else
+                {
+                    const quaternion rotation = quaternion::make_from_axis_angle(float3(0, 0, -1), thetas[selection]);
+                    initial_direction = rotation.rotate(float2(1, 0));
+                }
+            }
         }
+
+        shape_Minkowski.make_Minkowski_difference_shape(shapes[0], shapes[1]);
 
         if (renderer.begin_rendering())
         {
             {
                 vertices.clear();
                 indices.clear();
-                shape_a.draw_line_semgments_to(vertices, indices);
-                shape_b.draw_line_semgments_to(vertices, indices);
+
+                MeshGenerator<VS_INPUT>::push_2D_circle(shapes[0]._center, 2.0f, 16, vertices, indices);
+                MeshGenerator<VS_INPUT>::push_2D_circle(shapes[1]._center, 2.0f, 16, vertices, indices);
+                shapes[0].draw_line_semgments_to(vertices, indices);
+                shapes[1].draw_line_semgments_to(vertices, indices);
                 shape_Minkowski.draw_points_to(vertices, indices);
                 shape_Minkowski.draw_line_semgments_to(vertices, indices);
                 MeshGenerator<VS_INPUT>::fill_vertex_color(vertices, float4(1, 1, 1, 1));
@@ -529,12 +581,13 @@ int main()
                 {
                     const size_t vertex_offset = vertices.size();
                     GJK::DebugData debugData;
-                    GJK::intersects(shape_a, shape_b, &debugData);
+                    GJK::intersects(shapes[0], shapes[1], initial_direction, &debugData);
+
                     debugData._simplex.draw_to(shape_Minkowski._center, vertices, indices);
-                    const float2& support_a = shape_a.support(debugData._direction);
-                    const float2& support_b = shape_b.support(-debugData._direction);
-                    MeshGenerator<VS_INPUT>::push_2D_lineSegment(shape_a._center, shape_a._center + debugData._direction * 40.0f, 2.0f, vertices, indices);
-                    MeshGenerator<VS_INPUT>::push_2D_lineSegment(shape_b._center, shape_b._center - debugData._direction * 40.0f, 2.0f, vertices, indices);
+                    const float2& support_a = shapes[0].support(debugData._direction);
+                    const float2& support_b = shapes[1].support(-debugData._direction);
+                    MeshGenerator<VS_INPUT>::push_2D_lineSegment(shapes[0]._center, shapes[0]._center + debugData._direction * 40.0f, 2.0f, vertices, indices);
+                    MeshGenerator<VS_INPUT>::push_2D_lineSegment(shapes[1]._center, shapes[1]._center - debugData._direction * 40.0f, 2.0f, vertices, indices);
                     MeshGenerator<VS_INPUT>::push_2D_circle(support_a, 4.0f, 8, vertices, indices);
                     MeshGenerator<VS_INPUT>::push_2D_circle(support_b, 4.0f, 8, vertices, indices);
                     MeshGenerator<VS_INPUT>::fill_vertex_color(vertex_offset, vertices, float4(1, 0, 1, 1));
