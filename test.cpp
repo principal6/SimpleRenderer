@@ -453,8 +453,8 @@ int main()
 
 
     float2 positions[2]{};
-    positions[0] = float2(100, 150);
-    positions[1] = float2(200, 150);
+    positions[0] = float2(300, 150);
+    positions[1] = float2(400, 150);
     float2 positions_prev[2]{};
     float thetas[3]{};
     float thetas_prev[3]{};
@@ -604,6 +604,13 @@ int main()
             renderer.draw_indexed((uint32)indices.size());
 
             renderer.draw_text("GJK Algorithm Test", float2(10, 10));
+            renderer.draw_text("q: --gjk_step", float2(10, 40));
+            renderer.draw_text("w: ++gjk_step", float2(10, 60));
+            renderer.draw_text("e: translate", float2(10, 80));
+            renderer.draw_text("r: rotate", float2(10, 100));
+            renderer.draw_text("1: shape A", float2(10, 120));
+            renderer.draw_text("2: shape B", float2(10, 140));
+            renderer.draw_text("3: initial direction", float2(10, 160));
 
             //char buffer[8]{};
             //for (size_t i = 0; i < shapeMinkowski._points.size(); ++i)
