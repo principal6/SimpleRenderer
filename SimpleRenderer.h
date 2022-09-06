@@ -456,8 +456,9 @@ namespace SimpleRenderer
         Texture2D<float4> g_texture0;
         float4 main(VS_OUTPUT input) : SV_Target
         {
-            float4 sampled = g_texture0.Sample(g_sampler0, input.texcoord.xy);
-            float4 sampledBold = sqrt(sqrt(sampled.r));
+            float4 sampled = g_texture0.Sample(g_sampler0, input.texcoord.xy).r;
+            clip (sampled.a - 0.125);
+            float4 sampledBold = sqrt(sqrt(sampled));
             return float4(sampledBold) * input.color;
         }
     )";
