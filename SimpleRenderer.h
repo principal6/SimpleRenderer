@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include <wrl.h>
 #include <Windows.h>
+#include <windowsx.h>
 #include <iostream>
 #include <cmath>
 #include <vector>
@@ -743,11 +744,22 @@ namespace SimpleRenderer
         {
             void clear()
             {
-                _isLButtonUp = false;
-                _isRButtonUp = false;
+                _is_L_button_pressed = false;
+                _is_L_button_released = false;
+                _is_R_button_released = false;
             }
-            bool _isLButtonUp = false;
-            bool _isRButtonUp = false;
+            void updatePosition(const MSG& msg)
+            {
+                _position.x = static_cast<float>(GET_X_LPARAM(msg.lParam));
+                _position.y = static_cast<float>(GET_Y_LPARAM(msg.lParam));
+            }
+            bool _is_L_button_pressed = false;
+            bool _is_L_button_released = false;
+            bool _is_R_button_released = false;
+            float2 _L_pressed_position;
+            float2 _position;
+            
+            bool _is_L_button_down = false;
         };
         struct KeyboardState
         {
@@ -784,9 +796,12 @@ namespace SimpleRenderer
         ID3D11DeviceContext* getDeviceContext() const { return _deviceContext.Get(); }
 
     public:
-        bool isMouseLeftButtonUp() const { return _mouseState._isLButtonUp; }
-        bool isMouseRightButtonUp() const { return _mouseState._isRButtonUp; }
-        char getKeyboardChar() const { return _keyboardState._char; }
+        bool is_mouse_L_button_down() const { return _mouseState._is_L_button_down; }
+        bool is_mouse_L_button_pressed() const { return _mouseState._is_L_button_pressed; }
+        bool is_mouse_L_button_released() const { return _mouseState._is_L_button_released; }
+        bool is_mouse_R_button_released() const { return _mouseState._is_R_button_released; }
+        float2 get_mouse_move_delta() const { return _mouseState._position - _mouseState._L_pressed_position; }
+        char get_keyboard_char() const { return _keyboardState._char; }
 
     private:
         bool createWindow();
@@ -1158,14 +1173,30 @@ namespace SimpleRenderer
         case WM_CHAR:
             _keyboardState._char = (char)msg.wParam;
             break;
+        case WM_MOUSEMOVE:
+        {
+            _mouseState.updatePosition(msg);
+            break;
+        }
+        case WM_LBUTTONDOWN:
+        {
+            _mouseState._is_L_button_pressed = true;
+            _mouseState._is_L_button_down = true;
+            _mouseState.updatePosition(msg);
+            _mouseState._L_pressed_position = _mouseState._position;
+            break;
+        }
         case WM_LBUTTONUP:
         {
-            _mouseState._isLButtonUp = true;
+            _mouseState._is_L_button_released = true;
+            _mouseState._is_L_button_down = false;
+            _mouseState.updatePosition(msg);
             break;
         }
         case WM_RBUTTONUP:
         {
-            _mouseState._isRButtonUp = true;
+            _mouseState._is_R_button_released = true;
+            _mouseState.updatePosition(msg);
             break;
         }
         case WM_QUIT:
@@ -1455,7 +1486,7 @@ namespace SimpleRenderer
         }
 
         {
-            D3D11_DEPTH_STENCIL_DESC depthStencilDescriptor;
+            D3D11_DEPTH_STENCIL_DESC depthStencilDescriptor{};
             depthStencilDescriptor.DepthEnable = TRUE;
             depthStencilDescriptor.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS_EQUAL;
             depthStencilDescriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK::D3D11_DEPTH_WRITE_MASK_ALL;

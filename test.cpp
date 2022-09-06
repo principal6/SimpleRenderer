@@ -452,14 +452,17 @@ int main()
 
     std::vector<VS_INPUT> vertices;
     std::vector<uint32> indices;
-    GJK::Shape2D shape_a;
-    shape_a._center = float2(100, 120);
-    shape_a._points.push_back(float2(-20, -45));
-    shape_a._points.push_back(float2(-50, 0));
-    shape_a._points.push_back(float2(-10, 30));
-    shape_a._points.push_back(float2(30, 20));
-    shape_a._points.push_back(float2(50, -10));
-    shape_a.rotate(0.375f);
+    float shape_a_theta = 0.0f;
+    float shape_a_theta_prev = 0.0f;
+    GJK::Shape2D shape_a_original;
+    shape_a_original._center = float2(100, 120);
+    shape_a_original._points.push_back(float2(-20, -45));
+    shape_a_original._points.push_back(float2(-50, 0));
+    shape_a_original._points.push_back(float2(-10, 30));
+    shape_a_original._points.push_back(float2(30, 20));
+    shape_a_original._points.push_back(float2(50, -10));
+    GJK::Shape2D shape_a = shape_a_original;
+    shape_a.rotate(shape_a_theta);
     shape_a.draw_line_semgments_to(vertices, indices);
     MeshGenerator<VS_INPUT>::push_2D_circle(shape_a._center, 2.0f, 16, vertices, indices);
     GJK::Shape2D shape_b;
@@ -485,8 +488,34 @@ int main()
 
     while (renderer.isRunning())
     {
+        if (renderer.get_keyboard_char() == '2')
+        {
+            ++GJK::g_max_step;
+        }
+        else if (renderer.get_keyboard_char() == '1')
+        {
+            if (GJK::g_max_step > 0)
+            {
+                --GJK::g_max_step;
+            }
+        }
+
+        if (renderer.is_mouse_L_button_pressed())
+        {
+            shape_a_theta_prev = shape_a_theta;
+        }
+        if (renderer.is_mouse_L_button_down())
+        {
+            const float theta = (renderer.get_mouse_move_delta().x + renderer.get_mouse_move_delta().y) * 0.03125f;
+            shape_a_theta = shape_a_theta_prev + theta;
+            
+            shape_a = shape_a_original;
+            shape_a.rotate(shape_a_theta);
+        }
+
         if (renderer.beginRendering())
         {
+
             {
                 vertices.clear();
                 indices.clear();
@@ -521,31 +550,6 @@ int main()
             renderer.bindInput(indexBuffer, 0);
             renderer.bindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
             renderer.drawIndexed((uint32)indices.size());
-
-            if (renderer.getKeyboardChar() == '2')
-            {
-                ++GJK::g_max_step;
-            }
-            else if (renderer.getKeyboardChar() == '1')
-            {
-                if (GJK::g_max_step > 0)
-                {
-                    --GJK::g_max_step;
-                }
-            }
-            /*
-            if (renderer.isMouseLeftButtonUp())
-            {
-                ++GJK::g_max_step;
-            }
-            else if (renderer.isMouseRightButtonUp())
-            {
-                if (GJK::g_max_step > 0)
-                {
-                    --GJK::g_max_step;
-                }
-            }
-            */
 
             //char buffer[8]{};
             //for (size_t i = 0; i < shapeMinkowski._points.size(); ++i)
