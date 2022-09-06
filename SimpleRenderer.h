@@ -1607,7 +1607,7 @@ namespace SimpleRenderer
         _defaultFontVertexBuffer.create_buffer(renderer, ResourceType::VertexBuffer, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
         _defaultFontIndexBuffer.create_buffer(renderer, ResourceType::IndexBuffer, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
 
-        byte row0[kFontTextureGlyphCountInRow]{ ' ','!','\"','$','#','%','&','\'','(','*','+',',','-','.','/',')' };
+        byte row0[kFontTextureGlyphCountInRow]{ ' ','!','\"','$','#','%','&','\'','(',')','*','+',',','-','.','/' };
         create_device_create_default_FontData_push_glyphRow(0, row0);
 
         byte row1[kFontTextureGlyphCountInRow]{ '0','1','2','3','4','5','6','7','8','9',':',';','<','=','>','?' };
