@@ -90,7 +90,7 @@ namespace GJK
         }
         void rotate(const float yaw)
         {
-            quaternion q = quaternion::makeFromAxisAngle(float3(0, 0, -1), yaw);
+            quaternion q = quaternion::make_from_axis_angle(float3(0, 0, -1), yaw);
             float4 rotated;
             for (size_t i = 0; i < _points.size(); i++)
             {
@@ -282,7 +282,7 @@ namespace GJK
             const float3 ao = -a;
             const float3 ab = b - a;
             const float3 ab_x_ao = ab.cross(ao);
-            if (ab_x_ao.lengthSq() == 0.0f)
+            if (ab_x_ao.length_sq() == 0.0f)
             {
                 simplex = Simplex(a);
                 direction = ao;
@@ -430,15 +430,15 @@ int main()
     Renderer renderer{ Renderer(kScreenSize, Color(0, 0.5f, 1, 1)) };
 
     ShaderHeaderSet shaderHeaderSet;
-    shaderHeaderSet.pushShaderHeader("StreamData", kShaderHeaderCode_StreamData);
+    shaderHeaderSet.push_shader_header("StreamData", kShaderHeaderCode_StreamData);
 
     Shader vertexShader0;
     vertexShader0.create(renderer, kVertexShaderCode, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderSet);
 
     ShaderInputLayout shaderInputLayout;
-    shaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat4("POSITION", 0));
-    shaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat4("COLOR", 0));
-    shaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat2("TEXCOORD", 0));
+    shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("POSITION", 0));
+    shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("COLOR", 0));
+    shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float2("TEXCOORD", 0));
     shaderInputLayout.create(renderer, vertexShader0);
 
     Shader pixelShader0;
@@ -446,9 +446,9 @@ int main()
 
     Resource vscbMatrices;
     CB_MATRICES cb_matrices;
-    cb_matrices._projectionMatrix.makePixelCoordinatesProjectionMatrix(kScreenSize);
-    //cb_matrices._projectionMatrix.makePerspectiveProjectionMatrix(kPi * 0.25f, 0.001f, 1000.0f, kScreenSize.x / kScreenSize.y);
-    vscbMatrices.createBuffer(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
+    cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(kScreenSize);
+    //cb_matrices._projectionMatrix.make_perspective_projection_matrix(kPi * 0.25f, 0.001f, 1000.0f, kScreenSize.x / kScreenSize.y);
+    vscbMatrices.create_buffer(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
 
     std::vector<VS_INPUT> vertices;
     std::vector<uint32> indices;
@@ -479,14 +479,14 @@ int main()
     shape_Minkowski.make_Minkowski_difference_shape(shape_a, shape_b);
     shape_Minkowski.draw_points_to(vertices, indices);
     shape_Minkowski.draw_line_semgments_to(vertices, indices);
-    MeshGenerator<VS_INPUT>::fillVertexColor(vertices, float4(1, 1, 1, 1));
+    MeshGenerator<VS_INPUT>::fill_vertex_color(vertices, float4(1, 1, 1, 1));
 
     Resource vertexBuffer;
     Resource indexBuffer;
-    vertexBuffer.createBuffer(renderer, ResourceType::VertexBuffer, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
-    indexBuffer.createBuffer(renderer, ResourceType::IndexBuffer, &indices[0], sizeof(uint32), (uint32)indices.size());
+    vertexBuffer.create_buffer(renderer, ResourceType::VertexBuffer, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
+    indexBuffer.create_buffer(renderer, ResourceType::IndexBuffer, &indices[0], sizeof(uint32), (uint32)indices.size());
 
-    while (renderer.isRunning())
+    while (renderer.is_running())
     {
         if (renderer.get_keyboard_char() == '2')
         {
@@ -511,11 +511,12 @@ int main()
             
             shape_a = shape_a_original;
             shape_a.rotate(shape_a_theta);
+
+            shape_Minkowski.make_Minkowski_difference_shape(shape_a, shape_b);
         }
 
-        if (renderer.beginRendering())
+        if (renderer.begin_rendering())
         {
-
             {
                 vertices.clear();
                 indices.clear();
@@ -523,7 +524,7 @@ int main()
                 shape_b.draw_line_semgments_to(vertices, indices);
                 shape_Minkowski.draw_points_to(vertices, indices);
                 shape_Minkowski.draw_line_semgments_to(vertices, indices);
-                MeshGenerator<VS_INPUT>::fillVertexColor(vertices, float4(1, 1, 1, 1));
+                MeshGenerator<VS_INPUT>::fill_vertex_color(vertices, float4(1, 1, 1, 1));
 
                 {
                     const size_t vertex_offset = vertices.size();
@@ -536,30 +537,30 @@ int main()
                     MeshGenerator<VS_INPUT>::push_2D_lineSegment(shape_b._center, shape_b._center - debugData._direction * 40.0f, 2.0f, vertices, indices);
                     MeshGenerator<VS_INPUT>::push_2D_circle(support_a, 4.0f, 8, vertices, indices);
                     MeshGenerator<VS_INPUT>::push_2D_circle(support_b, 4.0f, 8, vertices, indices);
-                    MeshGenerator<VS_INPUT>::fillVertexColor(vertex_offset, vertices, float4(1, 0, 1, 1));
+                    MeshGenerator<VS_INPUT>::fill_vertex_color(vertex_offset, vertices, float4(1, 0, 1, 1));
                 }
 
                 vertexBuffer.update(renderer, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
                 indexBuffer.update(renderer, &indices[0], sizeof(uint32), (uint32)indices.size());
             }
 
-            renderer.bindShader(vertexShader0);
-            renderer.bindShaderInputLayout(shaderInputLayout);
-            renderer.bindShader(pixelShader0);
-            renderer.bindInput(vertexBuffer, 0);
-            renderer.bindInput(indexBuffer, 0);
-            renderer.bindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
-            renderer.drawIndexed((uint32)indices.size());
+            renderer.bind_Shader(vertexShader0);
+            renderer.bind_ShaderInputLayout(shaderInputLayout);
+            renderer.bind_Shader(pixelShader0);
+            renderer.bind_input(vertexBuffer, 0);
+            renderer.bind_input(indexBuffer, 0);
+            renderer.bind_ShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
+            renderer.draw_indexed((uint32)indices.size());
 
             //char buffer[8]{};
             //for (size_t i = 0; i < shapeMinkowski._points.size(); ++i)
             //{
             //    ::_itoa_s(static_cast<int>(i), buffer, 10);
             //    const auto& point = shapeMinkowski._points[i];
-            //    renderer.drawText(buffer, shapeMinkowski._center + point);
+            //    renderer.draw_text(buffer, shapeMinkowski._center + point);
             //}
 
-            renderer.endRendering();
+            renderer.end_rendering();
         }
     }
     return 0;

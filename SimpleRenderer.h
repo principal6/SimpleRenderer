@@ -135,8 +135,8 @@ namespace SimpleRenderer
         constexpr float2 operator*(const float s) const { return float2(x * s, y * s); }
         constexpr float2 operator/(const float s) const { return float2(x / s, y / s); }
         constexpr float dot(const float2& rhs) const { return x * rhs.x + y * rhs.y; }
-        constexpr float lengthSq() const { return dot(*this); }
-        float length() const { return ::sqrt(lengthSq()); }
+        constexpr float length_sq() const { return dot(*this); }
+        float length() const { return ::sqrt(length_sq()); }
         void normalize() { *this /= length(); }
         union { struct { float x; float y; }; float f[2]; };
     };
@@ -160,11 +160,11 @@ namespace SimpleRenderer
         float3& operator/=(const float s) { *this = (*this / s); return *this; }
         constexpr float dot(const float3& rhs) const { return x * rhs.x + y * rhs.y + z * rhs.z; }
         constexpr float3 cross(const float3& rhs) const { return float3(y * rhs.z - z * rhs.y, z * rhs.x - x * rhs.z, x * rhs.y - y * rhs.x); }
-        constexpr float lengthSq() const { return dot(*this); }
-        float length() const { return ::sqrt(lengthSq()); }
+        constexpr float length_sq() const { return dot(*this); }
+        float length() const { return ::sqrt(length_sq()); }
         void normalize() { *this /= length(); }
-        float3 computeNormalized() const { float3 result = *this; result.normalize(); return result; }
-        void setPoint(const float2& position) { x = position.x; y = position.y; z = 0; }
+        float3 compute_normalized() const { float3 result = *this; result.normalize(); return result; }
+        void set_point(const float2& position) { x = position.x; y = position.y; z = 0; }
         union { struct { float x; float y; float z; }; float f[3]; };
     };
     struct float4
@@ -186,11 +186,11 @@ namespace SimpleRenderer
         float4& operator*=(const float s) { *this = (*this * s); return *this; }
         float4& operator/=(const float s) { *this = (*this / s); return *this; }
         constexpr float dot(const float4& rhs) const { return x * rhs.x + y * rhs.y + z * rhs.z + w * rhs.w; }
-        constexpr float lengthSq() const { return dot(*this); }
-        float length() const { return ::sqrt(lengthSq()); }
+        constexpr float length_sq() const { return dot(*this); }
+        float length() const { return ::sqrt(length_sq()); }
         void normalize() { *this /= length(); }
-        float4 computeNormalized() const { float4 result = *this; result.normalize(); return result; }
-        void setPoint(const float2& position) { x = position.x; y = position.y; z = 0; w = 1; }
+        float4 compute_normalized() const { float4 result = *this; result.normalize(); return result; }
+        void set_point(const float2& position) { x = position.x; y = position.y; z = 0; w = 1; }
         union { struct { float x; float y; float z; float w; }; float f[4]; };
     };
     // quaternion = xi + yj + zk + w
@@ -217,7 +217,7 @@ namespace SimpleRenderer
             q *= quaternion::conjugate(*this);
             return float4(q.x, q.y, q.z, v.w);
         }
-        static quaternion makeFromAxisAngle(float3 axis, const float angle) noexcept
+        static quaternion make_from_axis_angle(float3 axis, const float angle) noexcept
         {
             axis.normalize();
             const float half_angle = angle * 0.5f;
@@ -225,7 +225,7 @@ namespace SimpleRenderer
             const float sin_half = ::sin(half_angle);
             return quaternion(sin_half * axis.x, sin_half * axis.y, sin_half * axis.z, cos_half);
         }
-        void getAxisAngle(float3& axis, float& angle) const noexcept
+        void get_axis_angle(float3& axis, float& angle) const noexcept
         {
             angle = ::acos(w) * 2.0f;
 
@@ -271,22 +271,22 @@ namespace SimpleRenderer
                 float _41; float _42; float _43; float _44;
             };
         };
-        void makeIdentity()
+        void make_identity()
         {
             _11 = 1; _12 = 0; _13 = 0; _14 = 0; _21 = 0; _22 = 1; _23 = 0; _24 = 0; _31 = 0; _32 = 0; _33 = 1; _34 = 0; _41 = 0; _42 = 0; _43 = 0; _44 = 1;
         }
-        void makeZero()
+        void make_zero()
         {
             _11 = 0; _12 = 0; _13 = 0; _14 = 0; _21 = 0; _22 = 0; _23 = 0; _24 = 0; _31 = 0; _32 = 0; _33 = 0; _34 = 0; _41 = 0; _42 = 0; _43 = 0; _44 = 0;
         }
-        void makePixelCoordinatesProjectionMatrix(const float2& screenSize)
+        void make_pixel_coordinates_projection_matrix(const float2& screenSize)
         {
-            makeIdentity();
+            make_identity();
             _11 = 2.0f / screenSize.x; _14 = -1.0f; _22 = -2.0f / screenSize.y; _24 = 1.0f;
         }
-        void makePerspectiveProjectionMatrix(const float FOVAngle, const float nearDepthAbs, const float farDepthAbs, const float screenWidthOverHeight)
+        void make_perspective_projection_matrix(const float FOVAngle, const float nearDepthAbs, const float farDepthAbs, const float screenWidthOverHeight)
         {
-            makeZero();
+            make_zero();
             bool isRightHanded = true;
             const float halfFOVAngle = FOVAngle * 0.5f;
             const float a = 1.0f / (tanf(halfFOVAngle) * screenWidthOverHeight);
@@ -300,28 +300,28 @@ namespace SimpleRenderer
             _34 = d;
             _43 = e;
         }
-        void preTranslate(const float x, const float y, const float z) noexcept
+        void pre_translate(const float x, const float y, const float z) noexcept
         {
             _14 += x; _24 += y; _34 += z;
         }
-        void postScale(const float x, const float y, const float z) noexcept
+        void post_scale(const float x, const float y, const float z) noexcept
         {
             _11 *= x; _12 *= y; _13 *= z;
             _21 *= x; _22 *= y; _23 *= z;
             _31 *= x; _32 *= y; _33 *= z;
             _41 *= x; _42 *= y; _43 *= z;
         }
-        static float4x4 createRotationMatrix(const quaternion& q)
+        static float4x4 create_rotation_matrix(const quaternion& q)
         {
             float3 axis;
             float angle;
-            q.getAxisAngle(axis, angle);
-            return createRotationMatrix(axis, angle);
+            q.get_axis_angle(axis, angle);
+            return create_rotation_matrix(axis, angle);
         }
-        static float4x4 createRotationMatrix(const float3& axis, const float angle)
+        static float4x4 create_rotation_matrix(const float3& axis, const float angle)
         {
             // (v * r)r(1 - cosθ) + vcosθ + (r X v)sinθ
-            const float3 r = axis.computeNormalized();
+            const float3 r = axis.compute_normalized();
             const float c = ::cosf(angle);
             const float s = ::sinf(angle);
             const float rx = r.x;
@@ -344,9 +344,9 @@ namespace SimpleRenderer
             // SRT matrix for column vector is like below:
             // SRT = T * R * S
             // which is the same as below..
-            float4x4 matrix = float4x4::createRotationMatrix(_rotation);
-            matrix.preTranslate(_translation.x, _translation.y, _translation.z);
-            matrix.postScale(_scale.x, _scale.y, _scale.z);
+            float4x4 matrix = float4x4::create_rotation_matrix(_rotation);
+            matrix.pre_translate(_translation.x, _translation.y, _translation.z);
+            matrix.post_scale(_scale.x, _scale.y, _scale.z);
             return matrix;
         }
         void make_from_float4x4(const float4x4 m) noexcept
@@ -476,8 +476,8 @@ namespace SimpleRenderer
     class DefaultFontData
     {
     public:
-        void pushGlyph(const DefaultFontGlyphMeta& glyphMeta);
-        const DefaultFontGlyphMeta& getGlyphMeta(const byte& ch) const;
+        void push_glyph(const DefaultFontGlyphMeta& glyphMeta);
+        const DefaultFontGlyphMeta& get_GlyphMeta(const byte& ch) const;
 
     private:
         std::vector<DefaultFontGlyphMeta> _glyphMetas;
@@ -491,7 +491,7 @@ namespace SimpleRenderer
         virtual ~ShaderHeaderSet() = default;
 
     public:
-        void pushShaderHeader(const std::string& headerName, const std::string& headerCode);
+        void push_shader_header(const std::string& headerName, const std::string& headerCode);
 
     public:
         virtual HRESULT Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) override final;
@@ -514,18 +514,18 @@ namespace SimpleRenderer
             uint32 _instanceStepRate = 0;
         };
 
-        static InputElement createInputElementFloat4(const char* const semanticName, const uint32 semanticIndex) { return __createInputElement_common(DXGI_FORMAT_R32G32B32A32_FLOAT, semanticName, semanticIndex); }
-        static InputElement createInputElementFloat3(const char* const semanticName, const uint32 semanticIndex) { return __createInputElement_common(DXGI_FORMAT_R32G32B32_FLOAT, semanticName, semanticIndex); }
-        static InputElement createInputElementFloat2(const char* const semanticName, const uint32 semanticIndex) { return __createInputElement_common(DXGI_FORMAT_R32G32_FLOAT, semanticName, semanticIndex); }
-        static InputElement createInputElementFloat(const char* const semanticName, const uint32 semanticIndex) { return __createInputElement_common(DXGI_FORMAT_R32_FLOAT, semanticName, semanticIndex); }
+        static InputElement create_InputElement_float4(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(DXGI_FORMAT_R32G32B32A32_FLOAT, semanticName, semanticIndex); }
+        static InputElement create_InputElement_float3(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(DXGI_FORMAT_R32G32B32_FLOAT, semanticName, semanticIndex); }
+        static InputElement create_InputElement_float2(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(DXGI_FORMAT_R32G32_FLOAT, semanticName, semanticIndex); }
+        static InputElement create_InputElement_float(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(DXGI_FORMAT_R32_FLOAT, semanticName, semanticIndex); }
 
-        void clearInputElements();
-        void pushInputElement(const InputElement& newInputElement);
+        void clear_InputElements();
+        void push_InputElement(const InputElement& newInputElement);
 
         bool create(Renderer& renderer, const Shader& vertexShader);
 
     private:
-        static InputElement __createInputElement_common(const DXGI_FORMAT format, const char* const semanticName, const uint32 semanticIndex)
+        static InputElement __create_InputElement_common(const DXGI_FORMAT format, const char* const semanticName, const uint32 semanticIndex)
         {
             InputElement inputElement;
             inputElement._format = format;
@@ -534,7 +534,7 @@ namespace SimpleRenderer
             return inputElement;
         }
 
-        uint32 computeInputElementByteSize(const D3D11_INPUT_ELEMENT_DESC& inputElementDesc)
+        uint32 compute_InputElement_byte_size(const D3D11_INPUT_ELEMENT_DESC& inputElementDesc)
         {
             switch (inputElementDesc.Format)
             {
@@ -583,17 +583,17 @@ namespace SimpleRenderer
         ~Resource() = default;
 
     public:
-        bool createTexture2D(Renderer& renderer, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height);
-        bool createBuffer(Renderer& renderer, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount);
+        bool create_texture2D(Renderer& renderer, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height);
+        bool create_buffer(Renderer& renderer, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount);
         bool update(Renderer& renderer, const void* const content, const uint32 elementStride, const uint32 elementCount);
 
     private:
         static DXGI_FORMAT __convert_to_DXGI_FORMAT(const TextureFormat& format);
-        static uint32 __computeElementStride(const TextureFormat& format);
+        static uint32 __compute_element_stride(const TextureFormat& format);
 
     public:
-        ID3D11Resource* getResource() const { return _resource.Get(); }
-        ID3D11View* getView() const { return _view.Get(); }
+        ID3D11Resource* get_resource() const { return _resource.Get(); }
+        ID3D11View* get_view() const { return _view.Get(); }
 
     public:
         ResourceType _type;
@@ -624,9 +624,9 @@ namespace SimpleRenderer
             vertices[vertexBase + 1]._position = b;
             vertices[vertexBase + 2]._position = c;
 
-            pushIndex(indices, vertexBase + 0);
-            pushIndex(indices, vertexBase + 1);
-            pushIndex(indices, vertexBase + 2);
+            push_index(indices, vertexBase + 0);
+            push_index(indices, vertexBase + 1);
+            push_index(indices, vertexBase + 2);
         }
 
         static void push_2D_triangle(const float2& a, const float2& b, const float2& c, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
@@ -641,9 +641,9 @@ namespace SimpleRenderer
             vertices[vertexBase + 1]._position = float4(b.x, b.y, 0, 1);
             vertices[vertexBase + 2]._position = float4(c.x, c.y, 0, 1);
 
-            pushIndex(indices, vertexBase + 0);
-            pushIndex(indices, vertexBase + 1);
-            pushIndex(indices, vertexBase + 2);
+            push_index(indices, vertexBase + 0);
+            push_index(indices, vertexBase + 1);
+            push_index(indices, vertexBase + 2);
         }
 
         static void push_2D_rectangle(const float2& centerPosition, const float2& size, const float rotationAngle, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
@@ -659,18 +659,18 @@ namespace SimpleRenderer
             const float sinTheta = ::sin(rotationAngle);
             const float2 rotatedX = float2(+cosTheta, -sinTheta);
             const float2 rotatedY = float2(+sinTheta, +cosTheta);
-            vertices[vertexBase + 0]._position.setPoint(centerPosition - rotatedX * halfSize.x - rotatedY * halfSize.y);
-            vertices[vertexBase + 1]._position.setPoint(centerPosition - rotatedX * halfSize.x + rotatedY * halfSize.y);
-            vertices[vertexBase + 2]._position.setPoint(centerPosition + rotatedX * halfSize.x + rotatedY * halfSize.y);
-            vertices[vertexBase + 3]._position.setPoint(centerPosition + rotatedX * halfSize.x - rotatedY * halfSize.y);
+            vertices[vertexBase + 0]._position.set_point(centerPosition - rotatedX * halfSize.x - rotatedY * halfSize.y);
+            vertices[vertexBase + 1]._position.set_point(centerPosition - rotatedX * halfSize.x + rotatedY * halfSize.y);
+            vertices[vertexBase + 2]._position.set_point(centerPosition + rotatedX * halfSize.x + rotatedY * halfSize.y);
+            vertices[vertexBase + 3]._position.set_point(centerPosition + rotatedX * halfSize.x - rotatedY * halfSize.y);
 
-            pushIndex(indices, vertexBase + 0);
-            pushIndex(indices, vertexBase + 1);
-            pushIndex(indices, vertexBase + 2);
+            push_index(indices, vertexBase + 0);
+            push_index(indices, vertexBase + 1);
+            push_index(indices, vertexBase + 2);
 
-            pushIndex(indices, vertexBase + 0);
-            pushIndex(indices, vertexBase + 2);
-            pushIndex(indices, vertexBase + 3);
+            push_index(indices, vertexBase + 0);
+            push_index(indices, vertexBase + 2);
+            push_index(indices, vertexBase + 3);
         }
 
         static void push_2D_circle(const float2& centerPosition, float radius, uint32 sideCount, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
@@ -691,9 +691,9 @@ namespace SimpleRenderer
                 const float y = -radius * ::sin(theta);
                 vertices[vertexBase + sideIndex + 1]._position = float4(centerPosition.x + x, centerPosition.y + y, 0, 1);
 
-                pushIndex(indices, vertexBase + 0);
-                pushIndex(indices, vertexBase + sideIndex + 1);
-                pushIndex(indices, vertexBase + sideIndex + 2);
+                push_index(indices, vertexBase + 0);
+                push_index(indices, vertexBase + sideIndex + 1);
+                push_index(indices, vertexBase + sideIndex + 2);
             }
             indices[indices.size() - 1] = static_cast<uint32>(vertexBase + 1);
         }
@@ -715,7 +715,7 @@ namespace SimpleRenderer
             push_2D_rectangle(m, float2(l, thickness), rotationAngle, vertices, indices);
         }
 
-        static void fillVertexColor(std::vector<Vertex>& vertices, const Color& color)
+        static void fill_vertex_color(std::vector<Vertex>& vertices, const Color& color)
         {
             for (auto& vertex : vertices)
             {
@@ -723,7 +723,7 @@ namespace SimpleRenderer
             }
         }
 
-        static void fillVertexColor(const size_t vertexOffset, std::vector<Vertex>& vertices, const Color& color)
+        static void fill_vertex_color(const size_t vertexOffset, std::vector<Vertex>& vertices, const Color& color)
         {
             for (size_t i = vertexOffset; i < vertices.size(); i++)
             {
@@ -732,7 +732,7 @@ namespace SimpleRenderer
         }
 
     private:
-        static void pushIndex(std::vector<uint32>& indices, const uint64 index)
+        static void push_index(std::vector<uint32>& indices, const uint64 index)
         {
             indices.push_back(static_cast<uint32>(index));
         }
@@ -748,7 +748,7 @@ namespace SimpleRenderer
                 _is_L_button_released = false;
                 _is_R_button_released = false;
             }
-            void updatePosition(const MSG& msg)
+            void update_position(const MSG& msg)
             {
                 _position.x = static_cast<float>(GET_X_LPARAM(msg.lParam));
                 _position.y = static_cast<float>(GET_Y_LPARAM(msg.lParam));
@@ -771,29 +771,29 @@ namespace SimpleRenderer
         };
 
     public:
-        Renderer(const float2& windowSize, const Color& clearColor) : _windowSize{ windowSize }, _clearColor{ clearColor } { if (createWindow()) createDevice(); }
-        ~Renderer() { destroyWindow(); }
+        Renderer(const float2& windowSize, const Color& clearColor) : _windowSize{ windowSize }, _clearColor{ clearColor } { if (create_window()) create_device(); }
+        ~Renderer() { destroy_window(); }
 
     public:
-        bool isRunning();
+        bool is_running();
 
     public:
-        void bindShaderInputLayout(ShaderInputLayout& shaderInputLayout);
-        void bindShader(Shader& shader);
-        void bindInput(Resource& resource, const uint32 slot);
-        void bindShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot);
-        void useTrianglePrimitive();
+        void bind_ShaderInputLayout(ShaderInputLayout& shaderInputLayout);
+        void bind_Shader(Shader& shader);
+        void bind_input(Resource& resource, const uint32 slot);
+        void bind_ShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot);
+        void use_triangle_primitive();
 
     public:
-        bool beginRendering();
+        bool begin_rendering();
         void draw(const uint32 vertexCount);
-        void drawIndexed(const uint32 indexCount);
-        void drawText(const std::string& text, const float2& position);
-        void endRendering();
+        void draw_indexed(const uint32 indexCount);
+        void draw_text(const std::string& text, const float2& position);
+        void end_rendering();
 
     public:
-        ID3D11Device* getDevice() const { return _device.Get(); }
-        ID3D11DeviceContext* getDeviceContext() const { return _deviceContext.Get(); }
+        ID3D11Device* get_device() const { return _device.Get(); }
+        ID3D11DeviceContext* get_device_context() const { return _deviceContext.Get(); }
 
     public:
         bool is_mouse_L_button_down() const { return _mouseState._is_L_button_down; }
@@ -804,12 +804,12 @@ namespace SimpleRenderer
         char get_keyboard_char() const { return _keyboardState._char; }
 
     private:
-        bool createWindow();
-        void destroyWindow();
-        void createDevice();
-        void createDevice_createDefaultFontData();
-        void createDevice_createDefaultFontData_pushGlyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow]);
-        void bindDefaultFontData();
+        bool create_window();
+        void destroy_window();
+        void create_device();
+        void create_device_create_default_FontData();
+        void create_device_create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow]);
+        void bind_default_FontData();
 
     private:
         HINSTANCE _hInstance = nullptr;
@@ -857,7 +857,7 @@ namespace SimpleRenderer
 
 
 #pragma region Function Definitions
-    void DefaultFontData::pushGlyph(const DefaultFontGlyphMeta& glyphMeta)
+    void DefaultFontData::push_glyph(const DefaultFontGlyphMeta& glyphMeta)
     {
         auto found = _glyphMap.find(glyphMeta._ch);
         if (found != _glyphMap.end())
@@ -869,7 +869,7 @@ namespace SimpleRenderer
         _glyphMap.insert(std::pair<byte, uint64>(glyphMeta._ch, _glyphMetas.size() - 1));
     }
 
-    const DefaultFontGlyphMeta& DefaultFontData::getGlyphMeta(const byte& ch) const
+    const DefaultFontGlyphMeta& DefaultFontData::get_GlyphMeta(const byte& ch) const
     {
         auto found = _glyphMap.find(ch);
         if (found == _glyphMap.end())
@@ -879,7 +879,7 @@ namespace SimpleRenderer
         return _glyphMetas[found->second];
     }
 
-    void ShaderHeaderSet::pushShaderHeader(const std::string& headerName, const std::string& headerCode)
+    void ShaderHeaderSet::push_shader_header(const std::string& headerName, const std::string& headerCode)
     {
         _headerNames.push_back(headerName);
         _headerCodes.push_back(headerCode);
@@ -900,13 +900,13 @@ namespace SimpleRenderer
         return E_FAIL;
     }
 
-    void ShaderInputLayout::clearInputElements()
+    void ShaderInputLayout::clear_InputElements()
     {
         _inputElements.clear();
         _inputTotalByteSize = 0;
     }
 
-    void ShaderInputLayout::pushInputElement(const InputElement& newInputElement)
+    void ShaderInputLayout::push_InputElement(const InputElement& newInputElement)
     {
         D3D11_INPUT_ELEMENT_DESC inputElementDesc{};
         inputElementDesc.AlignedByteOffset = _inputTotalByteSize;
@@ -918,7 +918,7 @@ namespace SimpleRenderer
         inputElementDesc.InstanceDataStepRate = newInputElement._instanceStepRate;
         _inputElements.push_back(inputElementDesc);
 
-        _inputTotalByteSize += computeInputElementByteSize(inputElementDesc);
+        _inputTotalByteSize += compute_InputElement_byte_size(inputElementDesc);
     }
 
     bool ShaderInputLayout::create(Renderer& renderer, const Shader& vertexShader)
@@ -929,7 +929,7 @@ namespace SimpleRenderer
             return false;
         }
 
-        if (FAILED(renderer.getDevice()->CreateInputLayout(&_inputElements[0], static_cast<UINT>(_inputElements.size()),
+        if (FAILED(renderer.get_device()->CreateInputLayout(&_inputElements[0], static_cast<UINT>(_inputElements.size()),
             vertexShader._shaderBlob->GetBufferPointer(), vertexShader._shaderBlob->GetBufferSize(), _inputLayout.ReleaseAndGetAddressOf())))
         {
             MINT_LOG_ERROR("Failed to create ShaderInputLayout");
@@ -971,7 +971,7 @@ namespace SimpleRenderer
 
         if (shaderType == ShaderType::VertexShader)
         {
-            if (FAILED(renderer.getDevice()->CreateVertexShader(_shaderBlob->GetBufferPointer(), _shaderBlob->GetBufferSize(), NULL, reinterpret_cast<ID3D11VertexShader**>(_shader.ReleaseAndGetAddressOf()))))
+            if (FAILED(renderer.get_device()->CreateVertexShader(_shaderBlob->GetBufferPointer(), _shaderBlob->GetBufferSize(), NULL, reinterpret_cast<ID3D11VertexShader**>(_shader.ReleaseAndGetAddressOf()))))
             {
                 return false;
             }
@@ -979,7 +979,7 @@ namespace SimpleRenderer
         }
         else if (shaderType == ShaderType::PixelShader)
         {
-            if (FAILED(renderer.getDevice()->CreatePixelShader(_shaderBlob->GetBufferPointer(), _shaderBlob->GetBufferSize(), NULL, reinterpret_cast<ID3D11PixelShader**>(_shader.ReleaseAndGetAddressOf()))))
+            if (FAILED(renderer.get_device()->CreatePixelShader(_shaderBlob->GetBufferPointer(), _shaderBlob->GetBufferSize(), NULL, reinterpret_cast<ID3D11PixelShader**>(_shader.ReleaseAndGetAddressOf()))))
             {
                 return false;
             }
@@ -988,7 +988,7 @@ namespace SimpleRenderer
         return false;
     }
 
-    bool Resource::createTexture2D(Renderer& renderer, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height)
+    bool Resource::create_texture2D(Renderer& renderer, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height)
     {
         ComPtr<ID3D11Resource> newResource;
         D3D11_TEXTURE2D_DESC texture2DDescriptor{};
@@ -1001,19 +1001,19 @@ namespace SimpleRenderer
         texture2DDescriptor.Usage = D3D11_USAGE::D3D11_USAGE_DEFAULT;
         texture2DDescriptor.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
         texture2DDescriptor.CPUAccessFlags = 0;
-        const uint32 elementStride = __computeElementStride(format);
+        const uint32 elementStride = __compute_element_stride(format);
         D3D11_SUBRESOURCE_DATA subResource{};
         subResource.pSysMem = resourceContent;
         subResource.SysMemPitch = texture2DDescriptor.Width * elementStride;
         subResource.SysMemSlicePitch = 0;
-        if (SUCCEEDED(renderer.getDevice()->CreateTexture2D(&texture2DDescriptor, &subResource, reinterpret_cast<ID3D11Texture2D**>(newResource.ReleaseAndGetAddressOf()))))
+        if (SUCCEEDED(renderer.get_device()->CreateTexture2D(&texture2DDescriptor, &subResource, reinterpret_cast<ID3D11Texture2D**>(newResource.ReleaseAndGetAddressOf()))))
         {
             D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDescriptor{};
             shaderResourceViewDescriptor.Format = texture2DDescriptor.Format;
             shaderResourceViewDescriptor.ViewDimension = D3D11_SRV_DIMENSION::D3D11_SRV_DIMENSION_TEXTURE2D;
             shaderResourceViewDescriptor.Texture2D.MipLevels = texture2DDescriptor.MipLevels;
             shaderResourceViewDescriptor.Texture2D.MostDetailedMip = 0;
-            if (SUCCEEDED(renderer.getDevice()->CreateShaderResourceView(newResource.Get(), &shaderResourceViewDescriptor, reinterpret_cast<ID3D11ShaderResourceView**>(_view.ReleaseAndGetAddressOf()))))
+            if (SUCCEEDED(renderer.get_device()->CreateShaderResourceView(newResource.Get(), &shaderResourceViewDescriptor, reinterpret_cast<ID3D11ShaderResourceView**>(_view.ReleaseAndGetAddressOf()))))
             {
                 _type = ResourceType::Teture2D;
                 _format = format;
@@ -1032,11 +1032,11 @@ namespace SimpleRenderer
         return false;
     }
 
-    bool Resource::createBuffer(Renderer& renderer, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount)
+    bool Resource::create_buffer(Renderer& renderer, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount)
     {
         if (type == ResourceType::Teture2D)
         {
-            MINT_ASSERT(false, "Use createTexture2D() instead!");
+            MINT_ASSERT(false, "Use create_texture2D() instead!");
             return false;
         }
 
@@ -1050,7 +1050,7 @@ namespace SimpleRenderer
         bufferDescriptor.StructureByteStride = 0;
         D3D11_SUBRESOURCE_DATA subresourceData{};
         subresourceData.pSysMem = content;
-        if (SUCCEEDED(renderer.getDevice()->CreateBuffer(&bufferDescriptor, (content != nullptr) ? &subresourceData : nullptr, reinterpret_cast<ID3D11Buffer**>(newResource.ReleaseAndGetAddressOf()))))
+        if (SUCCEEDED(renderer.get_device()->CreateBuffer(&bufferDescriptor, (content != nullptr) ? &subresourceData : nullptr, reinterpret_cast<ID3D11Buffer**>(newResource.ReleaseAndGetAddressOf()))))
         {
             _type = type;
             _byteSize = bufferDescriptor.ByteWidth;
@@ -1067,7 +1067,7 @@ namespace SimpleRenderer
     {
         if (elementCount > _elementMaxCount)
         {
-            return createBuffer(renderer, _type, content, elementStride, elementCount);
+            return create_buffer(renderer, _type, content, elementStride, elementCount);
         }
 
         class SafeResourceMapper
@@ -1079,7 +1079,7 @@ namespace SimpleRenderer
                 , _subresource{ subresource }
                 , _mappedSubresource{}
             {
-                if (FAILED(_renderer.getDeviceContext()->Map(_resource, _subresource, D3D11_MAP::D3D11_MAP_WRITE_DISCARD, 0, &_mappedSubresource)))
+                if (FAILED(_renderer.get_device_context()->Map(_resource, _subresource, D3D11_MAP::D3D11_MAP_WRITE_DISCARD, 0, &_mappedSubresource)))
                 {
                     _mappedSubresource.pData = nullptr;
                     _mappedSubresource.DepthPitch = 0;
@@ -1090,7 +1090,7 @@ namespace SimpleRenderer
             {
                 if (isValid() == true)
                 {
-                    _renderer.getDeviceContext()->Unmap(_resource, _subresource);
+                    _renderer.get_device_context()->Unmap(_resource, _subresource);
                 }
             }
             bool isValid() const noexcept
@@ -1133,7 +1133,7 @@ namespace SimpleRenderer
         return DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
     }
 
-    uint32 Resource::__computeElementStride(const TextureFormat& format)
+    uint32 Resource::__compute_element_stride(const TextureFormat& format)
     {
         switch (format)
         {
@@ -1159,7 +1159,7 @@ namespace SimpleRenderer
         return ::DefWindowProc(hWnd, Msg, wParam, lParam);
     }
 
-    bool Renderer::isRunning()
+    bool Renderer::is_running()
     {
         if (!_hWnd) return false;
 
@@ -1175,14 +1175,14 @@ namespace SimpleRenderer
             break;
         case WM_MOUSEMOVE:
         {
-            _mouseState.updatePosition(msg);
+            _mouseState.update_position(msg);
             break;
         }
         case WM_LBUTTONDOWN:
         {
             _mouseState._is_L_button_pressed = true;
             _mouseState._is_L_button_down = true;
-            _mouseState.updatePosition(msg);
+            _mouseState.update_position(msg);
             _mouseState._L_pressed_position = _mouseState._position;
             break;
         }
@@ -1190,17 +1190,17 @@ namespace SimpleRenderer
         {
             _mouseState._is_L_button_released = true;
             _mouseState._is_L_button_down = false;
-            _mouseState.updatePosition(msg);
+            _mouseState.update_position(msg);
             break;
         }
         case WM_RBUTTONUP:
         {
             _mouseState._is_R_button_released = true;
-            _mouseState.updatePosition(msg);
+            _mouseState.update_position(msg);
             break;
         }
         case WM_QUIT:
-            destroyWindow();
+            destroy_window();
             return false;
         default:
             break;
@@ -1210,7 +1210,7 @@ namespace SimpleRenderer
         return true;
     }
 
-    void Renderer::bindShaderInputLayout(ShaderInputLayout& shaderInputLayout)
+    void Renderer::bind_ShaderInputLayout(ShaderInputLayout& shaderInputLayout)
     {
         _is_InputLayout_bound = true;
 
@@ -1218,7 +1218,7 @@ namespace SimpleRenderer
             _deviceContext->IASetInputLayout(shaderInputLayout._inputLayout.Get());
     }
 
-    void Renderer::bindShader(Shader& shader)
+    void Renderer::bind_Shader(Shader& shader)
     {
         if (shader._type == ShaderType::VertexShader)
         {
@@ -1232,13 +1232,13 @@ namespace SimpleRenderer
         }
     }
 
-    void Renderer::bindInput(Resource& resource, const uint32 slot)
+    void Renderer::bind_input(Resource& resource, const uint32 slot)
     {
         if (resource._type == ResourceType::VertexBuffer)
         {
             _is_VertexBuffer_bound = true;
 
-            ID3D11Buffer* buffers[1]{ static_cast<ID3D11Buffer*>(resource.getResource()) };
+            ID3D11Buffer* buffers[1]{ static_cast<ID3D11Buffer*>(resource.get_resource()) };
             uint32 strides[1]{ resource._elementStride };
             uint32 offsets[1]{ 0 };
             _deviceContext->IASetVertexBuffers(slot, 1, buffers, strides, offsets);
@@ -1247,7 +1247,7 @@ namespace SimpleRenderer
         {
             _is_IndexBuffer_bound = true;
 
-            _deviceContext->IASetIndexBuffer(static_cast<ID3D11Buffer*>(resource.getResource()), Resource::kIndexBufferFormat, 0);
+            _deviceContext->IASetIndexBuffer(static_cast<ID3D11Buffer*>(resource.get_resource()), Resource::kIndexBufferFormat, 0);
         }
         else
         {
@@ -1255,11 +1255,11 @@ namespace SimpleRenderer
         }
     }
 
-    void Renderer::bindShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot)
+    void Renderer::bind_ShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot)
     {
         if (resource._type == ResourceType::ConstantBuffer)
         {
-            ID3D11Buffer* buffers[1]{ static_cast<ID3D11Buffer*>(resource.getResource()) };
+            ID3D11Buffer* buffers[1]{ static_cast<ID3D11Buffer*>(resource.get_resource()) };
             if (shaderType == ShaderType::VertexShader)
             {
                 _deviceContext->VSSetConstantBuffers(slot, 1, buffers);
@@ -1275,7 +1275,7 @@ namespace SimpleRenderer
         }
         else if (resource._type == ResourceType::Teture2D)
         {
-            ID3D11ShaderResourceView* views[1]{ static_cast<ID3D11ShaderResourceView*>(resource.getView()) };
+            ID3D11ShaderResourceView* views[1]{ static_cast<ID3D11ShaderResourceView*>(resource.get_view()) };
             if (shaderType == ShaderType::VertexShader)
             {
                 _deviceContext->VSSetShaderResources(slot, 1, views);
@@ -1295,20 +1295,20 @@ namespace SimpleRenderer
         }
     }
 
-    void Renderer::useTrianglePrimitive()
+    void Renderer::use_triangle_primitive()
     {
         _deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     }
 
-    bool Renderer::beginRendering()
+    bool Renderer::begin_rendering()
     {
         _deviceContext->ClearRenderTargetView(_backBufferRtv.Get(), _clearColor.f);
         _deviceContext->ClearDepthStencilView(_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-        useTrianglePrimitive();
+        use_triangle_primitive();
         return true;
     }
 
-    void Renderer::drawIndexed(const uint32 indexCount)
+    void Renderer::draw_indexed(const uint32 indexCount)
     {
         if (_is_InputLayout_bound == false)
         {
@@ -1334,7 +1334,7 @@ namespace SimpleRenderer
         _deviceContext->DrawIndexed(indexCount, 0, 0);
     }
 
-    void Renderer::drawText(const std::string& text, const float2& position)
+    void Renderer::draw_text(const std::string& text, const float2& position)
     {
         if (text.empty() == true)
         {
@@ -1348,7 +1348,7 @@ namespace SimpleRenderer
         uint32 chCount = 0;
         for (const char& ch : text)
         {
-            const DefaultFontGlyphMeta& glyphMeta = _defaultFontData.getGlyphMeta(ch);
+            const DefaultFontGlyphMeta& glyphMeta = _defaultFontData.get_GlyphMeta(ch);
             const float u0 = glyphMeta._u0;
             const float u1 = glyphMeta._u1;
             const float v0 = glyphMeta._v0;
@@ -1373,16 +1373,16 @@ namespace SimpleRenderer
         _deviceContext->Draw(vertexCount, 0);
     }
 
-    void Renderer::endRendering()
+    void Renderer::end_rendering()
     {
         if (_defaultFontVertices.empty() == false)
         {
             _defaultFontVertexBuffer.update(*this, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
             _defaultFontIndexBuffer.update(*this, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
 
-            bindDefaultFontData();
+            bind_default_FontData();
 
-            drawIndexed((uint32)_defaultFontIndices.size());
+            draw_indexed((uint32)_defaultFontIndices.size());
             _defaultFontVertices.clear();
             _defaultFontIndices.clear();
         }
@@ -1390,7 +1390,7 @@ namespace SimpleRenderer
         _swapChain->Present(0, 0);
     }
 
-    bool Renderer::createWindow()
+    bool Renderer::create_window()
     {
         _hInstance = ::GetModuleHandle(nullptr);
         WNDCLASSEX wndClassEx{};
@@ -1406,14 +1406,14 @@ namespace SimpleRenderer
         return (_hWnd != nullptr);
     }
 
-    void Renderer::destroyWindow()
+    void Renderer::destroy_window()
     {
         if (!_hWnd) return;
         ::DestroyWindow(_hWnd);
         _hWnd = nullptr;
     }
 
-    void Renderer::createDevice()
+    void Renderer::create_device()
     {
         DXGI_SWAP_CHAIN_DESC swapChainDescriptor{};
         swapChainDescriptor.BufferCount = 1;
@@ -1541,10 +1541,10 @@ namespace SimpleRenderer
         _deviceContext->OMSetRenderTargets(1, _backBufferRtv.GetAddressOf(), _depthStencilView.Get());
         _deviceContext->OMSetDepthStencilState(_defaultDepthStencilState.Get(), 0);
 
-        createDevice_createDefaultFontData();
+        create_device_create_default_FontData();
     }
 
-    void Renderer::createDevice_createDefaultFontData_pushGlyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow])
+    void Renderer::create_device_create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow])
     {
         const float glyphTextureWidth = (float)kFontTextureGlyphWidth;
         const float glyphTextureHeight = (float)kFontTextureGlyphHeight;
@@ -1554,28 +1554,28 @@ namespace SimpleRenderer
         const float v1 = v0 + glyphTextureUnit_V;
         for (uint32 iter = 0; iter < kFontTextureGlyphCountInRow; ++iter)
         {
-            _defaultFontData.pushGlyph(DefaultFontGlyphMeta(ch[iter], glyphTextureUnit_U * iter, v0, glyphTextureUnit_U * (iter + 1), v1));
+            _defaultFontData.push_glyph(DefaultFontGlyphMeta(ch[iter], glyphTextureUnit_U * iter, v0, glyphTextureUnit_U * (iter + 1), v1));
         }
     }
 
-    void Renderer::createDevice_createDefaultFontData()
+    void Renderer::create_device_create_default_FontData()
     {
         Renderer& renderer = *this;
 
-        _defaultFontShaderHeaderSet.pushShaderHeader("DefaultFontShaderHeader", kDefaultFontShaderHeaderCode);
+        _defaultFontShaderHeaderSet.push_shader_header("DefaultFontShaderHeader", kDefaultFontShaderHeaderCode);
 
         _defaultFontVertexShader.create(renderer, kDefaultFontVertexShaderCode, ShaderType::VertexShader, "DefaultFontVertexShader", "main", "vs_5_0", &_defaultFontShaderHeaderSet);
 
-        _defaultFontShaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat4("POSITION", 0));
-        _defaultFontShaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat4("COLOR", 0));
-        _defaultFontShaderInputLayout.pushInputElement(ShaderInputLayout::createInputElementFloat2("TEXCOORD", 0));
+        _defaultFontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("POSITION", 0));
+        _defaultFontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("COLOR", 0));
+        _defaultFontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float2("TEXCOORD", 0));
         _defaultFontShaderInputLayout.create(renderer, _defaultFontVertexShader);
 
         _defaultFontPixelShader.create(renderer, kDefaultFontPixelShaderCode, ShaderType::PixelShader, "DefaultFontPixelShader", "main", "ps_5_0", &_defaultFontShaderHeaderSet);
 
         DEFAULT_FONT_CB_MATRICES default_font_cb_matrices;
-        default_font_cb_matrices._projectionMatrix.makePixelCoordinatesProjectionMatrix(_windowSize);
-        _defaultFontCBMatrices.createBuffer(renderer, ResourceType::ConstantBuffer, &default_font_cb_matrices, sizeof(default_font_cb_matrices), 1);
+        default_font_cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(_windowSize);
+        _defaultFontCBMatrices.create_buffer(renderer, ResourceType::ConstantBuffer, &default_font_cb_matrices, sizeof(default_font_cb_matrices), 1);
 
         byte bytes[kFontTextureByteCount]{};
         for (uint32 iter = 0; iter < kFontTextureByteCount; ++iter)
@@ -1585,45 +1585,45 @@ namespace SimpleRenderer
             const byte byte_ = (kFontTextureRawBitData[byteAt] >> (7 - bitAt)) & 1;
             bytes[iter] = byte_ * 255;
         }
-        _defaultFontTexture.createTexture2D(renderer, TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight);
+        _defaultFontTexture.create_texture2D(renderer, TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight);
 
         MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(float2(256, 240), float2(512, 480), 0.0f, _defaultFontVertices, _defaultFontIndices);
         _defaultFontVertices[0]._texcoord = float2(0, 0);
         _defaultFontVertices[1]._texcoord = float2(1, 0);
         _defaultFontVertices[2]._texcoord = float2(0, 1);
         _defaultFontVertices[3]._texcoord = float2(1, 1);
-        _defaultFontVertexBuffer.createBuffer(renderer, ResourceType::VertexBuffer, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
-        _defaultFontIndexBuffer.createBuffer(renderer, ResourceType::IndexBuffer, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
+        _defaultFontVertexBuffer.create_buffer(renderer, ResourceType::VertexBuffer, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
+        _defaultFontIndexBuffer.create_buffer(renderer, ResourceType::IndexBuffer, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
 
         byte row0[kFontTextureGlyphCountInRow]{ ' ','!','\"','$','#','%','&','\'','(','*','+',',','-','.','/',')' };
-        createDevice_createDefaultFontData_pushGlyphRow(0, row0);
+        create_device_create_default_FontData_push_glyphRow(0, row0);
 
         byte row1[kFontTextureGlyphCountInRow]{ '0','1','2','3','4','5','6','7','8','9',':',';','<','=','>','?' };
-        createDevice_createDefaultFontData_pushGlyphRow(1, row1);
+        create_device_create_default_FontData_push_glyphRow(1, row1);
 
         byte row2[kFontTextureGlyphCountInRow]{ '@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O' };
-        createDevice_createDefaultFontData_pushGlyphRow(2, row2);
+        create_device_create_default_FontData_push_glyphRow(2, row2);
 
         byte row3[kFontTextureGlyphCountInRow]{ 'P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_' };
-        createDevice_createDefaultFontData_pushGlyphRow(3, row3);
+        create_device_create_default_FontData_push_glyphRow(3, row3);
 
         byte row4[kFontTextureGlyphCountInRow]{ '`','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o' };
-        createDevice_createDefaultFontData_pushGlyphRow(4, row4);
+        create_device_create_default_FontData_push_glyphRow(4, row4);
 
         byte row5[kFontTextureGlyphCountInRow]{ 'p','q','r','s','t','u','v','w','x','y','z','(','|',')','~', 0 };
-        createDevice_createDefaultFontData_pushGlyphRow(5, row5);
+        create_device_create_default_FontData_push_glyphRow(5, row5);
     }
 
-    void Renderer::bindDefaultFontData()
+    void Renderer::bind_default_FontData()
     {
-        bindShader(_defaultFontVertexShader);
-        bindShader(_defaultFontPixelShader);
-        bindShaderInputLayout(_defaultFontShaderInputLayout);
-        bindShaderResource(ShaderType::VertexShader, _defaultFontCBMatrices, 0);
-        bindShaderResource(ShaderType::PixelShader, _defaultFontTexture, 0);
+        bind_Shader(_defaultFontVertexShader);
+        bind_Shader(_defaultFontPixelShader);
+        bind_ShaderInputLayout(_defaultFontShaderInputLayout);
+        bind_ShaderResource(ShaderType::VertexShader, _defaultFontCBMatrices, 0);
+        bind_ShaderResource(ShaderType::PixelShader, _defaultFontTexture, 0);
 
-        bindInput(_defaultFontVertexBuffer, 0);
-        bindInput(_defaultFontIndexBuffer, 0);
+        bind_input(_defaultFontVertexBuffer, 0);
+        bind_input(_defaultFontIndexBuffer, 0);
     }
 #pragma endregion
 }
