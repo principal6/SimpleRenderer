@@ -128,13 +128,11 @@ namespace GJK
         {
             _center = float2(0, 0);
 
-            //const float2 shape_Minkowski._center = a._center - b._center;
             _points.clear();
             for (size_t i = 0; i < a._points.size(); i++)
             {
                 for (size_t j = 0; j < b._points.size(); j++)
                 {
-                    //_points.push_back(shape_Minkowski._center + a._points[i] - b._points[j]);
                     _points.push_back(a._points[i] - b._points[j]);
                 }
             }
@@ -455,27 +453,14 @@ int main()
     //cb_matrices._projectionMatrix.make_perspective_projection_matrix(kPi * 0.25f, 0.001f, 1000.0f, kScreenSize.x / kScreenSize.y);
     vscbMatrices.create_buffer(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
 
-
+    bool is_shapes_loaded = false;
+    float2 positions_source[2]{};
     float2 positions[2]{};
-    positions[0] = float2(400, 150);
-    positions[1] = float2(500, 150);
     float2 positions_prev[2]{};
     float thetas[3]{};
     float thetas_prev[3]{};
-    GJK::Shape2D shapes_source[2];
-    shapes_source[0]._center = positions[0];
-    shapes_source[0]._points.push_back(float2(-20, -45));
-    shapes_source[0]._points.push_back(float2(-50, 0));
-    shapes_source[0]._points.push_back(float2(-10, 30));
-    shapes_source[0]._points.push_back(float2(30, 20));
-    shapes_source[0]._points.push_back(float2(50, -10));
-    shapes_source[1]._center = positions[1];
-    shapes_source[1]._points.push_back(float2(80, -50));
-    shapes_source[1]._points.push_back(float2(-80, -50));
-    shapes_source[1]._points.push_back(float2(-80, 50));
+    GJK::Shape2D shape_sources[2];
     GJK::Shape2D shapes[2];
-    shapes[0] = shapes_source[0];
-    shapes[1] = shapes_source[1];
     GJK::Shape2D shape_Minkowski;
     Resource vertexBuffer;
     vertexBuffer._type = ResourceType::VertexBuffer;
@@ -526,6 +511,77 @@ int main()
         {
             selection = 2;
         }
+        else if (renderer.get_keyboard_char() == '0')
+        {
+            if (mode == 0)
+            {
+                if (selection <= 1)
+                {
+                    positions[selection] = positions_prev[selection] = positions_source[selection];
+                }
+            }
+            else
+            {
+                thetas[selection] = thetas_prev[selection] = 0.0f;
+            }
+        }
+
+        if (renderer.get_keyboard_up_key() == Renderer::Key::Enter || is_shapes_loaded == false)
+        {
+            std::string shapes_content;
+            read_file("shapes.txt", shapes_content);
+
+            XML xml;
+            if (xml.parse(shapes_content) == true)
+            {
+                uint32 shape_index = 0;
+                const XML::Node& root_node = xml.get_root_node();
+                for (const auto& root_child_node_ID : root_node._child_node_IDs)
+                {
+                    const XML::Node& shape_node = xml.get_node(root_child_node_ID);
+                    for (const auto& shape_child_node_ID : shape_node._child_node_IDs)
+                    {
+                        const XML::Node& shape_child_node = xml.get_node(shape_child_node_ID);
+                        if (shape_child_node.get_name() == "center")
+                        {
+                            XML::Attribute attribute = shape_child_node.get_attribute(0);
+                            const float x = std::stof(attribute.get_value());
+                            attribute = attribute.get_next_attribute();
+                            const float y = std::stof(attribute.get_value());
+
+                            positions_source[shape_index] = float2(x, y);
+                        }
+                        else if (shape_child_node.get_name() == "points")
+                        {
+                            shape_sources[shape_index]._points.clear();
+
+                            for (XML::Node point_node = shape_child_node.get_child_node(0); point_node.is_valid(); point_node = point_node.get_next_sibling())
+                            {
+                                XML::Attribute attribute = point_node.get_attribute(0);
+                                const float x = std::stof(attribute.get_value());
+                                attribute = attribute.get_next_attribute();
+                                const float y = std::stof(attribute.get_value());
+
+                                shape_sources[shape_index]._points.push_back(float2(x, y));
+                            }
+                        }
+                    }
+
+                    ++shape_index;
+                }
+            }
+
+            positions[0] = positions_prev[0] = positions_source[0];
+            positions[1] = positions_prev[1] = positions_source[1];
+
+            shape_sources[0]._center = positions[0];
+            shape_sources[1]._center = positions[1];
+
+            shapes[0] = shape_sources[0];
+            shapes[1] = shape_sources[1];
+
+            is_shapes_loaded = true;
+        }
 
         if (renderer.is_mouse_L_button_pressed())
         {
@@ -549,26 +605,27 @@ int main()
                 {
                     positions[selection].x = positions_prev[selection].x + renderer.get_mouse_move_delta().x;
                     positions[selection].y = positions_prev[selection].y + renderer.get_mouse_move_delta().y;
-
-                    shapes_source[selection]._center = positions[selection];
-                    shapes[selection]._center = shapes_source[selection]._center;
                 }
             }
             else
             {
                 const float theta = (renderer.get_mouse_move_delta().x + renderer.get_mouse_move_delta().y) * 0.03125f;
                 thetas[selection] = thetas_prev[selection] + theta;
-                if (selection <= 1)
-                {
-                    shapes[selection] = shapes_source[selection];
-                    shapes[selection].rotate(thetas[selection]);
-                }
-                else
-                {
-                    const quaternion rotation = quaternion::make_from_axis_angle(float3(0, 0, -1), thetas[selection]);
-                    initial_direction = rotation.rotate(float2(1, 0));
-                }
             }
+        }
+
+        if (selection <= 1)
+        {
+            shape_sources[selection]._center = positions[selection];
+            shapes[selection]._center = shape_sources[selection]._center;
+
+            shapes[selection] = shape_sources[selection];
+            shapes[selection].rotate(thetas[selection]);
+        }
+        else
+        {
+            const quaternion rotation = quaternion::make_from_axis_angle(float3(0, 0, -1), thetas[selection]);
+            initial_direction = rotation.rotate(float2(1, 0));
         }
 
         const float2 minkowski_shape_center_in_minkowski_space = shapes[0]._center - shapes[1]._center;
@@ -637,11 +694,15 @@ int main()
             renderer.draw_text((selection == 0 ? yellow_color : white_color), "1: shape A", float2(10, 40));
             renderer.draw_text((selection == 1 ? yellow_color : white_color), "2: shape B", float2(10, 60));
             renderer.draw_text((selection == 2 ? yellow_color : white_color), "3: initial direction", float2(10, 80));
-            renderer.draw_text((mode == 0 ? yellow_color : white_color), "e: translate", float2(10, 100));
-            renderer.draw_text((mode == 1 ? yellow_color : white_color), "r: rotate", float2(10, 120));
-            renderer.draw_text(white_color, "current gjk_max_step: " + std::to_string(GJK::g_max_step), float2(10, 160));
-            renderer.draw_text(white_color, "q: --gjk_max_step", float2(10, 180));
-            renderer.draw_text(white_color, "w: ++gjk_max_step", float2(10, 200));
+            renderer.draw_text((selection == 2 ? yellow_color : white_color), "0: reset", float2(10, 100));
+
+            renderer.draw_text((mode == 0 ? yellow_color : white_color), "e: translate", float2(10, 140));
+            renderer.draw_text((mode == 1 ? yellow_color : white_color), "r: rotate", float2(10, 160));
+            renderer.draw_text(white_color, "current gjk_max_step: " + std::to_string(GJK::g_max_step), float2(10, 180));
+            renderer.draw_text(white_color, "q: --gjk_max_step", float2(10, 200));
+            renderer.draw_text(white_color, "w: ++gjk_max_step", float2(10, 220));
+
+            renderer.draw_text(white_color, "ENTER: load shapes from file", float2(10, 260));
 
             //char buffer[8]{};
             //for (size_t i = 0; i < shapeMinkowski._points.size(); ++i)

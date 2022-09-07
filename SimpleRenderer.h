@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <d3d11.h>
 #include <wrl.h>
@@ -10,6 +10,7 @@
 #include <string>
 #include <unordered_map>
 #include <d3dcompiler.h>
+#include <fstream>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -748,8 +749,8 @@ namespace SimpleRenderer
             const float2 head_base = a + direction * l * (1.0f - head_length_ratio);
             const quaternion rotation = quaternion::make_from_axis_angle(float3(0, 0, -1), kPi * 0.5f);
             const float2 head_left_direction = rotation.rotate(direction);
-            const float2 head_left = head_base + head_left_direction * thickness* head_width_scale;
-            const float2 head_right = head_base - head_left_direction * thickness* head_width_scale;
+            const float2 head_left = head_base + head_left_direction * thickness * head_width_scale;
+            const float2 head_right = head_base - head_left_direction * thickness * head_width_scale;
             const float2& head_top = b;
             push_2D_triangle(color, head_right, head_top, head_left, vertices, indices);
         }
@@ -779,6 +780,14 @@ namespace SimpleRenderer
 
     class Renderer final
     {
+    public:
+        enum class Key
+        {
+            NONE,
+            Enter
+        };
+
+    private:
         struct MouseState
         {
             void clear()
@@ -805,8 +814,10 @@ namespace SimpleRenderer
             void clear()
             {
                 _char = 0;
+                _up_key = Key::NONE;
             }
             char _char = 0;
+            Key _up_key = Key::NONE;
         };
 
     public:
@@ -841,6 +852,7 @@ namespace SimpleRenderer
         bool is_mouse_R_button_released() const { return _mouseState._is_R_button_released; }
         float2 get_mouse_move_delta() const { return _mouseState._position - _mouseState._L_pressed_position; }
         char get_keyboard_char() const { return _keyboardState._char; }
+        Key get_keyboard_up_key() const { return _keyboardState._up_key; }
 
     private:
         bool create_window();
@@ -1209,6 +1221,14 @@ namespace SimpleRenderer
         if (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) == false) { return true; }
         switch (msg.message)
         {
+        case WM_KEYUP:
+        {
+            if (msg.wParam == VK_RETURN)
+            {
+                _keyboardState._up_key = Key::Enter;
+            }
+            break;
+        }
         case WM_CHAR:
             _keyboardState._char = (char)msg.wParam;
             break;
@@ -1478,7 +1498,7 @@ namespace SimpleRenderer
         }
 
         ComPtr<ID3D11Texture2D> backBuffer;
-        _swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.ReleaseAndGetAddressOf()));        
+        _swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.ReleaseAndGetAddressOf()));
         if (FAILED(_device->CreateRenderTargetView(backBuffer.Get(), nullptr, _backBufferRtv.ReleaseAndGetAddressOf())))
         {
             MINT_LOG_ERROR("Failed to get BackBuffer.");
@@ -1664,5 +1684,250 @@ namespace SimpleRenderer
         bind_input(_defaultFontVertexBuffer, 0);
         bind_input(_defaultFontIndexBuffer, 0);
     }
+
+    bool read_file(const std::string& file_name, std::string& out_content)
+    {
+        out_content.clear();
+
+        std::ifstream ifs;
+        ifs.open(file_name, std::ios_base::ate);
+        if (ifs.is_open() == false)
+        {
+            return false;
+        }
+
+        const std::streampos length = ifs.tellg();
+        ifs.seekg(std::ios_base::beg);
+        out_content.resize(length);
+        ifs.read(&out_content[0], length);
+        return true;
+    }
+
+    struct XML
+    {
+        struct Attribute;
+        struct Node;
+        static constexpr size_t INVALID_ID = size_t(-1);
+
+        struct Attribute
+        {
+            friend XML;
+
+            size_t _ID = 0;
+            size_t _node_ID = 0;
+            size_t _index_in_node = 0;
+            size_t _name_at = 0;
+            size_t _name_length = 0;
+            size_t _value_at = 0;
+            size_t _value_length = 0;
+
+            //std::string _debug_name;
+            //std::string _debug_value;
+
+            bool is_valid() const { return _name_length > 0; }
+            std::string get_name() const { return _XML->_text.substr(_name_at, _name_length); }
+            std::string get_value() const { return _XML->_text.substr(_value_at, _value_length); }
+            Attribute get_next_attribute() const { return get_node().get_attribute(_index_in_node + 1); }
+
+        private:
+            const Node& get_node() const { return _XML->get_node(_node_ID); }
+            const XML* _XML = nullptr;
+        };
+        struct Node
+        {
+            friend XML;
+
+            size_t _ID = 0;
+            size_t _parent_ID = 0;
+            size_t _index_in_parent_node = 0;
+            size_t _name_at = 0;
+            size_t _name_length = 0;
+            std::vector<size_t> _attribute_IDs;
+            std::vector<size_t> _child_node_IDs;
+
+            //std::string _debug_name;
+
+            bool is_valid() const { return _name_length > 0; }
+            std::string get_name() const { return _XML->_text.substr(_name_at, _name_length); }
+            const Attribute& get_attribute(const size_t index) const { return _XML->get_attribute((index >= _attribute_IDs.size() ? INVALID_ID : _attribute_IDs[index])); }
+            const Node& get_child_node(const size_t index) const { return _XML->get_node((index >= _child_node_IDs.size() ? INVALID_ID : _child_node_IDs[index])); }
+            const Node& get_next_sibling() const { return _XML->get_node(_parent_ID).get_child_node(_index_in_parent_node + 1); }
+
+        private:
+            bool has_name() const { return _name_length > 0; }
+            const XML* _XML = nullptr;
+        };
+        bool parse(const std::string& text)
+        {
+            _text = text;
+            if (check_validity() == false)
+            {
+                return false;
+            }
+
+            _at = 0;
+            _line = 1;
+            return parse_node(INVALID_ID);
+        }
+        const Node& get_root_node() const { return _nodes[0]; }
+        const Node& get_node(const size_t ID) const { return (ID >= _nodes.size() ? INVALID_NODE : _nodes[ID]); }
+        const Attribute& get_attribute(const size_t ID) const { return (ID >= _attributes.size() ? INVALID_ATTRIBUTE : _attributes[ID]); }
+
+    private:
+        bool advance_to_find(const char ch)
+        {
+            const size_t length = _text.length();
+            while (_at < length && _text[_at] != ch)
+            {
+                ++_at;
+            }
+            return _text[_at] == ch;
+        }
+        bool parse_node(const size_t parent_node_ID)
+        {
+            const size_t length = _text.length();
+            if (advance_to_find('<') == false)
+            {
+                return (_at == length);
+            }
+
+            if (_at + 1 < length && _text[_at + 1] == '/')
+            {
+                if (advance_to_find('>') == false)
+                {
+                    return false;
+                }
+
+                return parse_node(_nodes[parent_node_ID]._parent_ID);
+            }
+
+            const size_t node_name_at = _at + 1;
+            if (advance_to_find('>') == false)
+            {
+                return false;
+            }
+
+            const bool is_open_close_node = (_text[_at - 1] == '/');
+            const size_t node_ID = _nodes.size();
+            _nodes.push_back(Node());
+            _nodes.back()._XML = this;
+            _nodes.back()._ID = node_ID;
+            if (parent_node_ID != INVALID_ID)
+            {
+                _nodes[parent_node_ID]._child_node_IDs.push_back(_nodes[node_ID]._ID);
+                _nodes[node_ID]._index_in_parent_node = _nodes[parent_node_ID]._child_node_IDs.size() - 1;
+            }
+            _nodes[node_ID]._parent_ID = parent_node_ID;
+            _nodes[node_ID]._name_at = node_name_at;
+
+            for (size_t at = node_name_at; at < length; ++at)
+            {
+                if (_text[at] != ' ' && _text[at] != '/' && _text[at] != '>')
+                {
+                    continue;
+                }
+
+                if (_nodes[node_ID].has_name() == false)
+                {
+                    _nodes[node_ID]._name_length = at - node_name_at;
+
+                    //_nodes[node_ID]._debug_name = _text.substr(node_name_at, _nodes[node_ID]._name_length);
+                }
+
+                if ((_text[at] == '/' && at + 1 < length && _text[at + 1] == '>') || _text[at] == '>')
+                {
+                    // end
+                    _at = at + 1;
+                    return parse_node((is_open_close_node ? parent_node_ID : _nodes[node_ID]._ID));
+                }
+                else
+                {
+                    // attributes
+                    _at = at + 1;
+                    parse_attribute(_nodes[node_ID]);
+                }
+            }
+            return true;
+        }
+        bool parse_attribute(Node& node)
+        {
+            _attributes.push_back(Attribute());
+
+            Attribute& attribute = _attributes.back();
+            attribute._XML = this;
+            attribute._ID = _attributes.size() - 1;
+            attribute._name_at = _at;
+
+            node._attribute_IDs.push_back(attribute._ID);
+            attribute._node_ID = node._ID;
+            attribute._index_in_node = node._attribute_IDs.size() - 1;
+
+            if (advance_to_find('=') == false)
+            {
+                report_error("invalid attribute! '=' is needed.");
+                return false;
+            }
+
+            attribute._name_length = _at - attribute._name_at;
+            //attribute._debug_name = _text.substr(attribute._name_at, attribute._name_length);
+
+            if (_text[_at + 1] != '\"')
+            {
+                report_error("'\"' must be followed by '='.");
+                return false;
+            }
+            _at += 2;
+            attribute._value_at = _at;
+
+            if (advance_to_find('\"') == false)
+            {
+                report_error("closing '\"' is missing.");
+                return false;
+            }
+            attribute._value_length = _at - attribute._value_at;
+            //attribute._debug_value = _text.substr(attribute._value_at, attribute._value_length);
+            return true;
+        }
+
+    private:
+        bool check_validity() const
+        {
+            constexpr size_t CMP_COUNT = 4;
+            const char cmps[CMP_COUNT] = { ' ', '<', '>', '/' };
+            const size_t length = _text.length();
+            char message[] = "character[ ] is repeated!";
+            for (size_t at = 0; at < length; ++at)
+            {
+                for (size_t cmp_index = 0; cmp_index < CMP_COUNT; cmp_index++)
+                {
+                    if (_text[at] == cmps[cmp_index])
+                    {
+                        if (at + 1 < length && _text[at + 1] == cmps[cmp_index])
+                        {
+                            message[10] = cmps[cmp_index];
+                            report_error(message, at);
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+        void report_error(const std::string& error) const { _error = error; __report_where(_at); }
+        void report_error(const std::string& error, const size_t at) const { _error = error; __report_where(at); }
+        void __report_where(const size_t at) const { _error += " at["; _error += std::to_string(at); _error += "] line["; _error += std::to_string(_line); _error += "]"; }
+
+    private:
+        std::string _text;
+        std::vector<Node> _nodes;
+        std::vector<Attribute> _attributes;
+        mutable std::string _error;
+        size_t _at = 0;
+        size_t _line = 0;
+
+    private:
+        const Node INVALID_NODE;
+        const Attribute INVALID_ATTRIBUTE;
+    };
 #pragma endregion
 }
