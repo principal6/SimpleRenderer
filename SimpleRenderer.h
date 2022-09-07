@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <d3d11.h>
 #include <wrl.h>
@@ -496,8 +496,8 @@ namespace SimpleRenderer
         void push_shader_header(const std::string& headerName, const std::string& headerCode);
 
     public:
-        virtual HRESULT Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) override final;
-        virtual HRESULT Close(LPCVOID pData) override final { return S_OK; }
+        virtual HRESULT WINAPI Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) override final;
+        virtual HRESULT WINAPI Close(LPCVOID pData) override final { return S_OK; }
 
     public:
         std::vector<std::string> _headerNames;
@@ -727,6 +727,31 @@ namespace SimpleRenderer
             const float rotationAngle = ::atan2f(-direction.y, direction.x);
             const float2 m = (a + b) * 0.5f;
             push_2D_rectangle(color, m, float2(l, thickness), rotationAngle, vertices, indices);
+        }
+
+        static void push_2D_arrow(const Color& color, const float2& a, const float2& b, float thickness, float head_length_ratio, float head_width_scale, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+        {
+            thickness = max(thickness, 1.0f);
+
+            const float2 ab = b - a;
+            const float l = ab.length();
+            if (l == 0.0f)
+            {
+                return;
+            }
+
+            const float2 direction = ab / l;
+            const float rotationAngle = ::atan2f(-direction.y, direction.x);
+            const float2 m = (a + b) * 0.5f;
+            push_2D_rectangle(color, m, float2(l, thickness), rotationAngle, vertices, indices);
+
+            const float2 head_base = a + direction * l * (1.0f - head_length_ratio);
+            const quaternion rotation = quaternion::make_from_axis_angle(float3(0, 0, -1), kPi * 0.5f);
+            const float2 head_left_direction = rotation.rotate(direction);
+            const float2 head_left = head_base + head_left_direction * thickness* head_width_scale;
+            const float2 head_right = head_base - head_left_direction * thickness* head_width_scale;
+            const float2& head_top = b;
+            push_2D_triangle(color, head_right, head_top, head_left, vertices, indices);
         }
 
         static void fill_vertex_color(std::vector<Vertex>& vertices, const Color& color)
@@ -1453,7 +1478,7 @@ namespace SimpleRenderer
         }
 
         ComPtr<ID3D11Texture2D> backBuffer;
-        _swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.ReleaseAndGetAddressOf()));
+        _swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.ReleaseAndGetAddressOf()));        
         if (FAILED(_device->CreateRenderTargetView(backBuffer.Get(), nullptr, _backBufferRtv.ReleaseAndGetAddressOf())))
         {
             MINT_LOG_ERROR("Failed to get BackBuffer.");
@@ -1466,8 +1491,8 @@ namespace SimpleRenderer
         depthStencilResourceDescriptor.MipLevels = 1;
         depthStencilResourceDescriptor.ArraySize = 1;
         depthStencilResourceDescriptor.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-        depthStencilResourceDescriptor.SampleDesc.Count = 1;
-        depthStencilResourceDescriptor.SampleDesc.Quality = 0;
+        depthStencilResourceDescriptor.SampleDesc.Count = swapChainDescriptor.SampleDesc.Count;
+        depthStencilResourceDescriptor.SampleDesc.Quality = swapChainDescriptor.SampleDesc.Quality;
         depthStencilResourceDescriptor.Usage = D3D11_USAGE_DEFAULT;
         depthStencilResourceDescriptor.BindFlags = D3D11_BIND_DEPTH_STENCIL;
         depthStencilResourceDescriptor.CPUAccessFlags = 0;
@@ -1485,7 +1510,7 @@ namespace SimpleRenderer
 
         {
             D3D11_RASTERIZER_DESC rasterizerDescriptor{};
-            rasterizerDescriptor.AntialiasedLineEnable = TRUE;
+            rasterizerDescriptor.AntialiasedLineEnable = FALSE;
             rasterizerDescriptor.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
             rasterizerDescriptor.DepthBias = 0;
             rasterizerDescriptor.DepthBiasClamp = 0.0f;
