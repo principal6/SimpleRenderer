@@ -1,4 +1,4 @@
-#include "SimpleRenderer.h"
+﻿#include "SimpleRenderer.h"
 
 #include <algorithm>
 
@@ -121,7 +121,7 @@ namespace GJK
 
             for (size_t iter = 0; iter < _points.size(); iter++)
             {
-                MeshGenerator<VS_INPUT>::push_2D_circle(color, _center + _points[iter], 2.0f, 8, vertices, indices);
+                MeshGenerator<VS_INPUT>::push_2D_circle(color, _center + _points[iter], 3.0f, 8, vertices, indices);
             }
         }
         void make_Minkowski_difference_shape(const Shape2D& a, const Shape2D& b)
@@ -487,6 +487,7 @@ int main()
     uint32 selection = 0;
     float2 initial_direction = float2(1, 0);
     const Color white_color = Color(1, 1, 1, 1);
+    const Color orange_color = Color(1, 0.5f, 0, 1);
     const Color yellow_color = Color(1, 1, 0, 1);
     const Color dark_gray_color = Color(0.25f, 0.25f, 0.25f, 1);
     const Color blue_color = Color(0, 0, 1, 1);
@@ -587,7 +588,9 @@ int main()
                 const Color shape_color = (intersected ? Color(0, 1, 0, 1) : white_color);
                 MeshGenerator<VS_INPUT>::push_2D_circle(white_color, shapes[0]._center, 4.0f, 8, vertices, indices);
                 MeshGenerator<VS_INPUT>::push_2D_circle(white_color, shapes[1]._center, 4.0f, 8, vertices, indices);
+                shapes[0].draw_points_to(shape_color, vertices, indices);
                 shapes[0].draw_line_semgments_to(shape_color, vertices, indices);
+                shapes[1].draw_points_to(shape_color, vertices, indices);
                 shapes[1].draw_line_semgments_to(shape_color, vertices, indices);
 
                 shape_Minkowski.draw_points_to(dark_gray_color, vertices, indices);
@@ -595,7 +598,7 @@ int main()
 
                 {
                     const Color color_latest = Color(0.5f, 0, 1, 1);
-                    const Color color_shape_a = yellow_color;
+                    const Color color_shape_a = orange_color;
                     const Color color_shape_b = blue_color;
                     const float2& support_a = shapes[0].support(debugData._direction);
                     const float2& support_b = shapes[1].support(-debugData._direction);
