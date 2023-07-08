@@ -380,7 +380,7 @@ namespace SimpleRenderer
 	{
 		Transform2D() : Transform2D(0.0f) { __noop; }
 		Transform2D(const float rotation) : Transform2D(rotation, float2(0.0f, 0.0f)) { __noop; }
-		Transform2D(const float rotation, const float2& translation) : _scale{ 1.0f, 1.0f }, _rotation{ rotation }, _translation{ translation }{__noop; }
+		Transform2D(const float rotation, const float2& translation) : _scale{ 1.0f, 1.0f }, _rotation{ rotation }, _translation{ translation } { __noop; }
 		Transform2D& operator*=(const Transform2D& rhs)
 		{
 			MINT_ASSERT(_scale.x == _scale.y, "Shear is not supported for Transform2D!!!");
@@ -905,7 +905,7 @@ namespace SimpleRenderer
 		void use_triangle_primitive();
 
 	public:
-		bool begin_rendering();
+		void begin_rendering();
 		void draw(const uint32 vertexCount);
 		void draw_indexed(const uint32 indexCount);
 		void draw_text(const Color& color, const std::string& text, const float2& position);
@@ -1429,12 +1429,11 @@ namespace SimpleRenderer
 		_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	}
 
-	bool Renderer::begin_rendering()
+	void Renderer::begin_rendering()
 	{
 		_deviceContext->ClearRenderTargetView(_backBufferRtv.Get(), _clearColor.f);
 		_deviceContext->ClearDepthStencilView(_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 		use_triangle_primitive();
-		return true;
 	}
 
 	void Renderer::draw_indexed(const uint32 indexCount)
@@ -2091,7 +2090,7 @@ namespace SimpleRenderer
 
 		while (renderer.is_running())
 		{
-			if (renderer.begin_rendering())
+			renderer.begin_rendering();
 			{
 				vertices.clear();
 				indices.clear();
@@ -2110,9 +2109,8 @@ namespace SimpleRenderer
 					renderer.draw_indexed((uint32)indices.size());
 				}
 				renderer.draw_text(Color(1, 1, 1, 1), "Sample Window", float2(10, 10));
-
-				renderer.end_rendering();
 			}
+			renderer.end_rendering();
 		}
 		return 0;
 	}
