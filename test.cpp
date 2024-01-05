@@ -261,6 +261,21 @@ namespace GJK
 				MeshGenerator<VS_INPUT>::push_2D_lineSegment(color, offset + _points[i], offset + _points[prev], 2.0f, vertices, indices);
 			}
 		}
+		const float2& get_closest_point_to_origin() const
+		{
+			size_t min_index = 0;
+			float min_distance_sq = 99999.0f;
+			for (size_t i = 0; i < _validPointCount; i++)
+			{
+				const float distance_sq = _points[i].length_sq();
+				if (distance_sq < min_distance_sq)
+				{
+					min_distance_sq = distance_sq;
+					min_index = i;
+				}
+			}
+			return _points[min_index];
+		}
 		float2 _points[3];
 		size_t _validPointCount = 0;
 	};
@@ -652,6 +667,7 @@ int main()
 
 				shape_Minkowski.draw_points_to(dark_gray_color, vertices, indices);
 				shape_Minkowski.draw_line_semgments_to(dark_gray_color, vertices, indices);
+				MeshGenerator<VS_INPUT>::push_2D_circle(Color(0.5f, 1.0f, 0.25f, 1.0f), minkowski_space_origin + debugData._simplex.get_closest_point_to_origin(), 8.0f, 8, vertices, indices);
 
 				{
 					const Color color_latest = Color(0.5f, 0, 1, 1);
