@@ -17,8 +17,8 @@
 
 namespace SimpleRenderer
 {
-#define MINT_LOG_ERROR(content) { std::cout << content; ::DebugBreak(); }
-#define MINT_ASSERT(condition, content) if (!(condition)) { MINT_LOG_ERROR(content); }
+#define SR_LOG_ERROR(content) { std::cout << content; ::DebugBreak(); }
+#define SR_ASSERT(condition, content) if (!(condition)) { SR_LOG_ERROR(content); }
 
 #pragma region Aliases
 	using Microsoft::WRL::ComPtr;
@@ -120,6 +120,7 @@ namespace SimpleRenderer
 	};
 #pragma endregion
 
+#pragma region Math
 	struct float2
 	{
 		constexpr float2() : float2(0, 0) { __noop; }
@@ -383,7 +384,7 @@ namespace SimpleRenderer
 		Transform2D(const float rotation, const float2& translation) : _scale{ 1.0f, 1.0f }, _rotation{ rotation }, _translation{ translation } { __noop; }
 		Transform2D& operator*=(const Transform2D& rhs)
 		{
-			MINT_ASSERT(_scale.x == _scale.y, "Shear is not supported for Transform2D!!!");
+			SR_ASSERT(_scale.x == _scale.y, "Shear is not supported for Transform2D!!!");
 
 			float2x2 rotationMatrix;
 			rotationMatrix.make_rotationMatrix(_rotation);
@@ -451,6 +452,7 @@ namespace SimpleRenderer
 		float3 _translation;
 	};
 	using Color = float4;
+#pragma endregion
 
 	enum class ShaderType
 	{
@@ -622,7 +624,7 @@ namespace SimpleRenderer
 			default:
 				break;
 			}
-			MINT_LOG_ERROR("!!!");
+			SR_LOG_ERROR("!!!");
 			return 0;
 		}
 
@@ -1046,14 +1048,14 @@ namespace SimpleRenderer
 	{
 		if (_inputElements.empty())
 		{
-			MINT_LOG_ERROR("Push input elements before creating ShaderInputLayout!");
+			SR_LOG_ERROR("Push input elements before creating ShaderInputLayout!");
 			return false;
 		}
 
 		if (FAILED(renderer.get_device()->CreateInputLayout(&_inputElements[0], static_cast<UINT>(_inputElements.size()),
 			vertexShader._shaderBlob->GetBufferPointer(), vertexShader._shaderBlob->GetBufferSize(), _inputLayout.ReleaseAndGetAddressOf())))
 		{
-			MINT_LOG_ERROR("Failed to create ShaderInputLayout");
+			SR_LOG_ERROR("Failed to create ShaderInputLayout");
 			return false;
 		}
 		return true;
@@ -1063,19 +1065,19 @@ namespace SimpleRenderer
 	{
 		if (sourceCode == nullptr)
 		{
-			MINT_LOG_ERROR("Must exist source code!");
+			SR_LOG_ERROR("Must exist source code!");
 			return false;
 		}
 
 		if (entryPoint == nullptr)
 		{
-			MINT_LOG_ERROR("Must specify entry point!");
+			SR_LOG_ERROR("Must specify entry point!");
 			return false;
 		}
 
 		if (target == nullptr)
 		{
-			MINT_LOG_ERROR("Must specify target!");
+			SR_LOG_ERROR("Must specify target!");
 			return false;
 		}
 
@@ -1086,7 +1088,7 @@ namespace SimpleRenderer
 		if (FAILED(result))
 		{
 			std::string errorMessages(reinterpret_cast<char*>(_errorMessageBlob->GetBufferPointer()));
-			MINT_LOG_ERROR("Shader compile failed.");
+			SR_LOG_ERROR("Shader compile failed.");
 			return false;
 		}
 
@@ -1157,7 +1159,7 @@ namespace SimpleRenderer
 	{
 		if (type == ResourceType::Teture2D)
 		{
-			MINT_ASSERT(false, "Use create_texture2D() instead!");
+			SR_ASSERT(false, "Use create_texture2D() instead!");
 			return false;
 		}
 
@@ -1250,7 +1252,7 @@ namespace SimpleRenderer
 		default:
 			break;
 		}
-		MINT_ASSERT(false, "This texture format is not supported yet!");
+		SR_ASSERT(false, "This texture format is not supported yet!");
 		return DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
 	}
 
@@ -1265,7 +1267,7 @@ namespace SimpleRenderer
 		default:
 			break;
 		}
-		MINT_ASSERT(false, "This texture format is not supported yet!");
+		SR_ASSERT(false, "This texture format is not supported yet!");
 		return 4;
 	}
 
@@ -1380,7 +1382,7 @@ namespace SimpleRenderer
 		}
 		else
 		{
-			MINT_LOG_ERROR("!!!");
+			SR_LOG_ERROR("!!!");
 		}
 	}
 
@@ -1399,7 +1401,7 @@ namespace SimpleRenderer
 			}
 			else
 			{
-				MINT_LOG_ERROR("This shader type is not supported yet!");
+				SR_LOG_ERROR("This shader type is not supported yet!");
 			}
 		}
 		else if (resource._type == ResourceType::Teture2D)
@@ -1415,12 +1417,12 @@ namespace SimpleRenderer
 			}
 			else
 			{
-				MINT_LOG_ERROR("This shader type is not supported yet!");
+				SR_LOG_ERROR("This shader type is not supported yet!");
 			}
 		}
 		else
 		{
-			MINT_LOG_ERROR("This resource type is not supported yet!");
+			SR_LOG_ERROR("This resource type is not supported yet!");
 		}
 	}
 
@@ -1440,22 +1442,22 @@ namespace SimpleRenderer
 	{
 		if (_is_InputLayout_bound == false)
 		{
-			MINT_LOG_ERROR("You must bind ShaderInputLayout first!");
+			SR_LOG_ERROR("You must bind ShaderInputLayout first!");
 			return;
 		}
 		if (_is_VS_bound == false || _is_PS_bound == false)
 		{
-			MINT_LOG_ERROR("You must at least bind VertexShader and PixelShader first!");
+			SR_LOG_ERROR("You must at least bind VertexShader and PixelShader first!");
 			return;
 		}
 		if (_is_VertexBuffer_bound == false)
 		{
-			MINT_LOG_ERROR("You must bind VertexBuffer first!");
+			SR_LOG_ERROR("You must bind VertexBuffer first!");
 			return;
 		}
 		if (_is_IndexBuffer_bound == false)
 		{
-			MINT_LOG_ERROR("You must bind IndexBuffer first!");
+			SR_LOG_ERROR("You must bind IndexBuffer first!");
 			return;
 		}
 
@@ -1494,7 +1496,7 @@ namespace SimpleRenderer
 	{
 		if (_is_VertexBuffer_bound == false)
 		{
-			MINT_LOG_ERROR("You must bind VertexBuffer first!");
+			SR_LOG_ERROR("You must bind VertexBuffer first!");
 			return;
 		}
 
@@ -1562,7 +1564,7 @@ namespace SimpleRenderer
 		if (FAILED(::D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE::D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION,
 			&swapChainDescriptor, _swapChain.ReleaseAndGetAddressOf(), _device.ReleaseAndGetAddressOf(), nullptr, _deviceContext.ReleaseAndGetAddressOf())))
 		{
-			MINT_LOG_ERROR("Failed to create Device and SwapChain.");
+			SR_LOG_ERROR("Failed to create Device and SwapChain.");
 			return;
 		}
 
@@ -1570,7 +1572,7 @@ namespace SimpleRenderer
 		_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.ReleaseAndGetAddressOf()));
 		if (FAILED(_device->CreateRenderTargetView(backBuffer.Get(), nullptr, _backBufferRtv.ReleaseAndGetAddressOf())))
 		{
-			MINT_LOG_ERROR("Failed to get BackBuffer.");
+			SR_LOG_ERROR("Failed to get BackBuffer.");
 			return;
 		}
 
@@ -1588,12 +1590,12 @@ namespace SimpleRenderer
 		depthStencilResourceDescriptor.MiscFlags = 0;
 		if (FAILED(_device->CreateTexture2D(&depthStencilResourceDescriptor, nullptr, _depthStencilResource.ReleaseAndGetAddressOf())))
 		{
-			MINT_LOG_ERROR("Failed to create Depth-Stencil texture.");
+			SR_LOG_ERROR("Failed to create Depth-Stencil texture.");
 			return;
 		}
 		if (FAILED(_device->CreateDepthStencilView(_depthStencilResource.Get(), nullptr, _depthStencilView.ReleaseAndGetAddressOf())))
 		{
-			MINT_LOG_ERROR("Failed to create Depth-Stencil view.");
+			SR_LOG_ERROR("Failed to create Depth-Stencil view.");
 			return;
 		}
 
@@ -1621,7 +1623,7 @@ namespace SimpleRenderer
 			depthStencilDescriptor.StencilEnable = FALSE;
 			if (FAILED(_device->CreateDepthStencilState(&depthStencilDescriptor, _defaultDepthStencilState.ReleaseAndGetAddressOf())))
 			{
-				MINT_LOG_ERROR("Failed to create Depth-Stencil state.");
+				SR_LOG_ERROR("Failed to create Depth-Stencil state.");
 				return;
 			}
 		}
