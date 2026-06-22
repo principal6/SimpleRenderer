@@ -20,6 +20,15 @@ namespace SimpleRenderer
 #define SR_LOG_ERROR(content) { std::cout << content; ::DebugBreak(); }
 #define SR_ASSERT(condition, content) if (!(condition)) { SR_LOG_ERROR(content); }
 
+#if defined(_WIN32)
+#define SR_WINDOWS
+#endif // defined(_WIN32)
+
+#if defined(SR_WINDOWS)
+#define SR_DIRECTX
+#endif // defined(SR_WINDOWS)
+
+
 #pragma region Aliases
 	using Microsoft::WRL::ComPtr;
 	using int8 = int8_t;
@@ -35,7 +44,7 @@ namespace SimpleRenderer
 #pragma region Forward Declaration
 	struct float4;
 	struct quaternion;
-	class Renderer;
+	class App;
 	struct Shader;
 #pragma endregion
 
@@ -597,7 +606,7 @@ namespace SimpleRenderer
 		void clear_InputElements();
 		void push_InputElement(const InputElement& newInputElement);
 
-		bool create(Renderer& renderer, const Shader& vertexShader);
+		bool create(App& app, const Shader& vertexShader);
 
 	private:
 		static InputElement __create_InputElement_common(const DXGI_FORMAT format, const char* const semanticName, const uint32 semanticIndex)
@@ -638,7 +647,7 @@ namespace SimpleRenderer
 
 	struct Shader
 	{
-		bool create(Renderer& renderer, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet = nullptr);
+		bool create(App& app, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet = nullptr);
 
 		ShaderType _type = ShaderType::VertexShader;
 		ComPtr<ID3D10Blob> _shaderBlob;
@@ -658,9 +667,9 @@ namespace SimpleRenderer
 		~Resource() = default;
 
 	public:
-		bool create_texture2D(Renderer& renderer, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height);
-		bool create_buffer(Renderer& renderer, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount);
-		bool update(Renderer& renderer, const void* const content, const uint32 elementStride, const uint32 elementCount);
+		bool create_texture2D(App& app, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height);
+		bool create_buffer(App& app, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount);
+		bool update(App& app, const void* const content, const uint32 elementStride, const uint32 elementCount);
 
 	private:
 		static DXGI_FORMAT __convert_to_DXGI_FORMAT(const TextureFormat& format);
@@ -850,16 +859,20 @@ namespace SimpleRenderer
 		}
 	};
 
-	class Renderer final
+	class Window
 	{
 	public:
+		struct CreateDesc
+		{
+			const char* _windowTitle = "SimpleRenderer";
+			uint32 _width = 800;
+			uint32 _height = 600;
+		};
 		enum class Key
 		{
 			NONE,
 			Enter
 		};
-
-	private:
 		struct MouseState
 		{
 			void clear()
@@ -893,8 +906,37 @@ namespace SimpleRenderer
 		};
 
 	public:
-		Renderer(const float2& windowSize, const Color& clearColor) : _windowSize{ windowSize }, _clearColor{ clearColor } { if (create_window()) create_device(); }
-		~Renderer() { destroy_window(); }
+		Window() = default;
+		~Window() = default;
+
+	public:
+		bool create(const CreateDesc& createDesc);
+		void destroy();
+		int32 processMessages();
+
+	public:
+		uint32 get_width() const { return _windowWidth; }
+		uint32 get_height() const { return _windowHeight; }
+		uint64 get_window_handle() const { return _windowHandle; }
+		const MouseState& get_mouse_state() const { return _mouseState; }
+		const KeyboardState& get_keyboard_state() const { return _keyboardState; }
+
+	private:
+		uint64 _instanceHandle = 0;
+		uint64 _windowHandle = 0;
+		uint32 _windowWidth = 0;
+		uint32 _windowHeight = 0;
+
+	private:
+		MouseState _mouseState;
+		KeyboardState _keyboardState;
+	};
+
+	class App final
+	{
+	public:
+		App(Window& window, const Color& clearColor) : _window{ window }, _clearColor{ clearColor } { create_device(); }
+		~App() = default;
 
 	public:
 		bool is_running();
@@ -918,26 +960,22 @@ namespace SimpleRenderer
 		ID3D11DeviceContext* get_device_context() const { return _deviceContext.Get(); }
 
 	public:
-		bool is_mouse_L_button_down() const { return _mouseState._is_L_button_down; }
-		bool is_mouse_L_button_pressed() const { return _mouseState._is_L_button_pressed; }
-		bool is_mouse_L_button_released() const { return _mouseState._is_L_button_released; }
-		bool is_mouse_R_button_released() const { return _mouseState._is_R_button_released; }
-		float2 get_mouse_move_delta() const { return _mouseState._position - _mouseState._L_pressed_position; }
-		char get_keyboard_char() const { return _keyboardState._char; }
-		Key get_keyboard_up_key() const { return _keyboardState._up_key; }
+		bool is_mouse_L_button_down() const { return _window.get_mouse_state()._is_L_button_down; }
+		bool is_mouse_L_button_pressed() const { return _window.get_mouse_state()._is_L_button_pressed; }
+		bool is_mouse_L_button_released() const { return _window.get_mouse_state()._is_L_button_released; }
+		bool is_mouse_R_button_released() const { return _window.get_mouse_state()._is_R_button_released; }
+		float2 get_mouse_move_delta() const { return _window.get_mouse_state()._position - _window.get_mouse_state()._L_pressed_position; }
+		char get_keyboard_char() const { return _window.get_keyboard_state()._char; }
+		Window::Key get_keyboard_up_key() const { return _window.get_keyboard_state()._up_key; }
 
 	private:
-		bool create_window();
-		void destroy_window();
 		void create_device();
 		void create_device_create_default_FontData();
 		void create_device_create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow]);
 		void bind_default_FontData();
 
 	private:
-		HINSTANCE _hInstance = nullptr;
-		HWND _hWnd = nullptr;
-		float2 _windowSize;
+		Window& _window;
 		Color _clearColor;
 
 	private:
@@ -972,10 +1010,6 @@ namespace SimpleRenderer
 		std::vector<DEFAULT_FONT_VS_INPUT> _defaultFontVertices;
 		std::vector<uint32> _defaultFontIndices;
 		float2 _defaultFontScale = float2(1.25f, 2.25f);
-
-	private:
-		MouseState _mouseState;
-		KeyboardState _keyboardState;
 	};
 
 
@@ -1044,7 +1078,7 @@ namespace SimpleRenderer
 		_inputTotalByteSize += compute_InputElement_byte_size(inputElementDesc);
 	}
 
-	bool ShaderInputLayout::create(Renderer& renderer, const Shader& vertexShader)
+	bool ShaderInputLayout::create(App& app, const Shader& vertexShader)
 	{
 		if (_inputElements.empty())
 		{
@@ -1052,7 +1086,7 @@ namespace SimpleRenderer
 			return false;
 		}
 
-		if (FAILED(renderer.get_device()->CreateInputLayout(&_inputElements[0], static_cast<UINT>(_inputElements.size()),
+		if (FAILED(app.get_device()->CreateInputLayout(&_inputElements[0], static_cast<UINT>(_inputElements.size()),
 			vertexShader._shaderBlob->GetBufferPointer(), vertexShader._shaderBlob->GetBufferSize(), _inputLayout.ReleaseAndGetAddressOf())))
 		{
 			SR_LOG_ERROR("Failed to create ShaderInputLayout");
@@ -1061,7 +1095,7 @@ namespace SimpleRenderer
 		return true;
 	}
 
-	bool Shader::create(Renderer& renderer, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet)
+	bool Shader::create(App& app, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet)
 	{
 		if (sourceCode == nullptr)
 		{
@@ -1094,7 +1128,7 @@ namespace SimpleRenderer
 
 		if (shaderType == ShaderType::VertexShader)
 		{
-			if (FAILED(renderer.get_device()->CreateVertexShader(_shaderBlob->GetBufferPointer(), _shaderBlob->GetBufferSize(), NULL, reinterpret_cast<ID3D11VertexShader**>(_shader.ReleaseAndGetAddressOf()))))
+			if (FAILED(app.get_device()->CreateVertexShader(_shaderBlob->GetBufferPointer(), _shaderBlob->GetBufferSize(), NULL, reinterpret_cast<ID3D11VertexShader**>(_shader.ReleaseAndGetAddressOf()))))
 			{
 				return false;
 			}
@@ -1102,7 +1136,7 @@ namespace SimpleRenderer
 		}
 		else if (shaderType == ShaderType::PixelShader)
 		{
-			if (FAILED(renderer.get_device()->CreatePixelShader(_shaderBlob->GetBufferPointer(), _shaderBlob->GetBufferSize(), NULL, reinterpret_cast<ID3D11PixelShader**>(_shader.ReleaseAndGetAddressOf()))))
+			if (FAILED(app.get_device()->CreatePixelShader(_shaderBlob->GetBufferPointer(), _shaderBlob->GetBufferSize(), NULL, reinterpret_cast<ID3D11PixelShader**>(_shader.ReleaseAndGetAddressOf()))))
 			{
 				return false;
 			}
@@ -1111,7 +1145,7 @@ namespace SimpleRenderer
 		return false;
 	}
 
-	bool Resource::create_texture2D(Renderer& renderer, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height)
+	bool Resource::create_texture2D(App& app, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height)
 	{
 		ComPtr<ID3D11Resource> newResource;
 		D3D11_TEXTURE2D_DESC texture2DDescriptor{};
@@ -1129,14 +1163,14 @@ namespace SimpleRenderer
 		subResource.pSysMem = resourceContent;
 		subResource.SysMemPitch = texture2DDescriptor.Width * elementStride;
 		subResource.SysMemSlicePitch = 0;
-		if (SUCCEEDED(renderer.get_device()->CreateTexture2D(&texture2DDescriptor, &subResource, reinterpret_cast<ID3D11Texture2D**>(newResource.ReleaseAndGetAddressOf()))))
+		if (SUCCEEDED(app.get_device()->CreateTexture2D(&texture2DDescriptor, &subResource, reinterpret_cast<ID3D11Texture2D**>(newResource.ReleaseAndGetAddressOf()))))
 		{
 			D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDescriptor{};
 			shaderResourceViewDescriptor.Format = texture2DDescriptor.Format;
 			shaderResourceViewDescriptor.ViewDimension = D3D11_SRV_DIMENSION::D3D11_SRV_DIMENSION_TEXTURE2D;
 			shaderResourceViewDescriptor.Texture2D.MipLevels = texture2DDescriptor.MipLevels;
 			shaderResourceViewDescriptor.Texture2D.MostDetailedMip = 0;
-			if (SUCCEEDED(renderer.get_device()->CreateShaderResourceView(newResource.Get(), &shaderResourceViewDescriptor, reinterpret_cast<ID3D11ShaderResourceView**>(_view.ReleaseAndGetAddressOf()))))
+			if (SUCCEEDED(app.get_device()->CreateShaderResourceView(newResource.Get(), &shaderResourceViewDescriptor, reinterpret_cast<ID3D11ShaderResourceView**>(_view.ReleaseAndGetAddressOf()))))
 			{
 				_type = ResourceType::Teture2D;
 				_format = format;
@@ -1155,7 +1189,7 @@ namespace SimpleRenderer
 		return false;
 	}
 
-	bool Resource::create_buffer(Renderer& renderer, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount)
+	bool Resource::create_buffer(App& app, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount)
 	{
 		if (type == ResourceType::Teture2D)
 		{
@@ -1173,7 +1207,7 @@ namespace SimpleRenderer
 		bufferDescriptor.StructureByteStride = 0;
 		D3D11_SUBRESOURCE_DATA subresourceData{};
 		subresourceData.pSysMem = content;
-		if (SUCCEEDED(renderer.get_device()->CreateBuffer(&bufferDescriptor, (content != nullptr) ? &subresourceData : nullptr, reinterpret_cast<ID3D11Buffer**>(newResource.ReleaseAndGetAddressOf()))))
+		if (SUCCEEDED(app.get_device()->CreateBuffer(&bufferDescriptor, (content != nullptr) ? &subresourceData : nullptr, reinterpret_cast<ID3D11Buffer**>(newResource.ReleaseAndGetAddressOf()))))
 		{
 			_type = type;
 			_byteSize = bufferDescriptor.ByteWidth;
@@ -1186,23 +1220,23 @@ namespace SimpleRenderer
 		return false;
 	}
 
-	bool Resource::update(Renderer& renderer, const void* const content, const uint32 elementStride, const uint32 elementCount)
+	bool Resource::update(App& app, const void* const content, const uint32 elementStride, const uint32 elementCount)
 	{
 		if (elementCount > _elementMaxCount)
 		{
-			return create_buffer(renderer, _type, content, elementStride, elementCount);
+			return create_buffer(app, _type, content, elementStride, elementCount);
 		}
 
 		class SafeResourceMapper
 		{
 		public:
-			SafeResourceMapper(Renderer& renderer, ID3D11Resource* const resource, const uint32 subresource)
-				: _renderer{ renderer }
+			SafeResourceMapper(App& app, ID3D11Resource* const resource, const uint32 subresource)
+				: _app{ app }
 				, _resource{ resource }
 				, _subresource{ subresource }
 				, _mappedSubresource{}
 			{
-				if (FAILED(_renderer.get_device_context()->Map(_resource, _subresource, D3D11_MAP::D3D11_MAP_WRITE_DISCARD, 0, &_mappedSubresource)))
+				if (FAILED(_app.get_device_context()->Map(_resource, _subresource, D3D11_MAP::D3D11_MAP_WRITE_DISCARD, 0, &_mappedSubresource)))
 				{
 					_mappedSubresource.pData = nullptr;
 					_mappedSubresource.DepthPitch = 0;
@@ -1213,7 +1247,7 @@ namespace SimpleRenderer
 			{
 				if (isValid() == true)
 				{
-					_renderer.get_device_context()->Unmap(_resource, _subresource);
+					_app.get_device_context()->Unmap(_resource, _subresource);
 				}
 			}
 			bool isValid() const noexcept
@@ -1226,13 +1260,13 @@ namespace SimpleRenderer
 			}
 
 		private:
-			Renderer& _renderer;
+			App& _app;
 			ID3D11Resource* const _resource;
 			const uint32 _subresource;
 			D3D11_MAPPED_SUBRESOURCE _mappedSubresource;
 		};
 
-		SafeResourceMapper safeResourceMapper(renderer, _resource.Get(), 0);
+		SafeResourceMapper safeResourceMapper(app, _resource.Get(), 0);
 		if (safeResourceMapper.isValid())
 		{
 			safeResourceMapper.set(content, elementStride * elementCount);
@@ -1282,13 +1316,46 @@ namespace SimpleRenderer
 		return ::DefWindowProc(hWnd, Msg, wParam, lParam);
 	}
 
-	bool Renderer::is_running()
+	bool Window::create(const Window::CreateDesc& createDesc)
 	{
-		if (!_hWnd) return false;
+#if defined(SR_WINDOWS)
+		const HINSTANCE typedInstanceHandle = ::GetModuleHandle(nullptr);
+		_instanceHandle = reinterpret_cast<uint64>(typedInstanceHandle);
+		WNDCLASSEX wndClassEx{};
+		wndClassEx.cbSize = sizeof(wndClassEx);
+		wndClassEx.hInstance = typedInstanceHandle;
+		wndClassEx.lpszClassName = TEXT("SimpleRenderer Window");
+		wndClassEx.hbrBackground = ::CreateSolidBrush(RGB(255, 255, 255));
+		wndClassEx.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+		wndClassEx.lpfnWndProc = windowProcedure;
+		::RegisterClassEx(&wndClassEx);
+		const HWND typedWindowHandle = ::CreateWindowEx(0, wndClassEx.lpszClassName, TEXT("TEST"), WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, (int)createDesc._width, (int)createDesc._height, nullptr, nullptr, typedInstanceHandle, nullptr);
+		_windowHandle = reinterpret_cast<uint64>(typedWindowHandle);
+		if (_windowHandle == 0) { _instanceHandle = 0; return false; }
+		_windowWidth = createDesc._width;
+		_windowHeight = createDesc._height;
+		::ShowWindow(typedWindowHandle, SW_SHOWDEFAULT);
+		return true;
+#else
+		return false;
+#endif // defined(SR_WINDOWS)
+	}
 
+	void Window::destroy()
+	{
+#if defined(SR_WINDOWS)
+		if (_windowHandle == 0) { return; }
+		::DestroyWindow(reinterpret_cast<HWND>(_windowHandle));
+		_windowHandle = 0;
+		_instanceHandle = 0;
+#endif // defined(SR_WINDOWS)
+	}
+
+	int32 Window::processMessages()
+	{
 		_keyboardState.clear();
 		_mouseState.clear();
-
+#if defined(SR_WINDOWS)
 		MSG msg{};
 		if (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) == false) { return true; }
 		switch (msg.message)
@@ -1331,17 +1398,27 @@ namespace SimpleRenderer
 			break;
 		}
 		case WM_QUIT:
-			destroy_window();
-			return false;
+			//destroy_window();
+			return -1;
 		default:
 			break;
 		}
 		::DispatchMessage(&msg);
 		::TranslateMessage(&msg);
+#endif // defined(SR_WINDOWS)
+		return 0;
+	}
+
+	bool App::is_running()
+	{
+		if (_window.processMessages() < 0)
+		{
+			return false;
+		}
 		return true;
 	}
 
-	void Renderer::bind_ShaderInputLayout(ShaderInputLayout& shaderInputLayout)
+	void App::bind_ShaderInputLayout(ShaderInputLayout& shaderInputLayout)
 	{
 		_is_InputLayout_bound = true;
 
@@ -1349,7 +1426,7 @@ namespace SimpleRenderer
 			_deviceContext->IASetInputLayout(shaderInputLayout._inputLayout.Get());
 	}
 
-	void Renderer::bind_Shader(Shader& shader)
+	void App::bind_Shader(Shader& shader)
 	{
 		if (shader._type == ShaderType::VertexShader)
 		{
@@ -1363,7 +1440,7 @@ namespace SimpleRenderer
 		}
 	}
 
-	void Renderer::bind_input(Resource& resource, const uint32 slot)
+	void App::bind_input(Resource& resource, const uint32 slot)
 	{
 		if (resource._type == ResourceType::VertexBuffer)
 		{
@@ -1386,7 +1463,7 @@ namespace SimpleRenderer
 		}
 	}
 
-	void Renderer::bind_ShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot)
+	void App::bind_ShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot)
 	{
 		if (resource._type == ResourceType::ConstantBuffer)
 		{
@@ -1426,19 +1503,19 @@ namespace SimpleRenderer
 		}
 	}
 
-	void Renderer::use_triangle_primitive()
+	void App::use_triangle_primitive()
 	{
 		_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	}
 
-	void Renderer::begin_rendering()
+	void App::begin_rendering()
 	{
 		_deviceContext->ClearRenderTargetView(_backBufferRtv.Get(), _clearColor.f);
 		_deviceContext->ClearDepthStencilView(_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 		use_triangle_primitive();
 	}
 
-	void Renderer::draw_indexed(const uint32 indexCount)
+	void App::draw_indexed(const uint32 indexCount)
 	{
 		if (_is_InputLayout_bound == false)
 		{
@@ -1464,7 +1541,7 @@ namespace SimpleRenderer
 		_deviceContext->DrawIndexed(indexCount, 0, 0);
 	}
 
-	void Renderer::draw_text(const Color& color, const std::string& text, const float2& position)
+	void App::draw_text(const Color& color, const std::string& text, const float2& position)
 	{
 		if (text.empty() == true)
 		{
@@ -1492,7 +1569,7 @@ namespace SimpleRenderer
 		}
 	}
 
-	void Renderer::draw(const uint32 vertexCount)
+	void App::draw(const uint32 vertexCount)
 	{
 		if (_is_VertexBuffer_bound == false)
 		{
@@ -1503,7 +1580,7 @@ namespace SimpleRenderer
 		_deviceContext->Draw(vertexCount, 0);
 	}
 
-	void Renderer::end_rendering()
+	void App::end_rendering()
 	{
 		if (_defaultFontVertices.empty() == false)
 		{
@@ -1520,43 +1597,21 @@ namespace SimpleRenderer
 		_swapChain->Present(0, 0);
 	}
 
-	bool Renderer::create_window()
+	void App::create_device()
 	{
-		_hInstance = ::GetModuleHandle(nullptr);
-		WNDCLASSEX wndClassEx{};
-		wndClassEx.cbSize = sizeof(wndClassEx);
-		wndClassEx.hInstance = _hInstance;
-		wndClassEx.lpszClassName = TEXT("SimpleRenderer Window");
-		wndClassEx.hbrBackground = ::CreateSolidBrush(RGB(255, 255, 255));
-		wndClassEx.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
-		wndClassEx.lpfnWndProc = windowProcedure;
-		::RegisterClassEx(&wndClassEx);
-		_hWnd = ::CreateWindowEx(0, wndClassEx.lpszClassName, TEXT("TEST"), WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, (int)_windowSize.x, (int)_windowSize.y, nullptr, nullptr, _hInstance, nullptr);
-		if (_hWnd) ::ShowWindow(_hWnd, SW_SHOWDEFAULT);
-		return (_hWnd != nullptr);
-	}
-
-	void Renderer::destroy_window()
-	{
-		if (!_hWnd) return;
-		::DestroyWindow(_hWnd);
-		_hWnd = nullptr;
-	}
-
-	void Renderer::create_device()
-	{
+#if defined(SR_DIRECTX)
 		DXGI_SWAP_CHAIN_DESC swapChainDescriptor{};
 		swapChainDescriptor.BufferCount = 1;
 		swapChainDescriptor.BufferDesc.Format = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
-		swapChainDescriptor.BufferDesc.Width = static_cast<UINT>(_windowSize.x);
-		swapChainDescriptor.BufferDesc.Height = static_cast<UINT>(_windowSize.y);
+		swapChainDescriptor.BufferDesc.Width = static_cast<UINT>(_window.get_width());
+		swapChainDescriptor.BufferDesc.Height = static_cast<UINT>(_window.get_height());
 		swapChainDescriptor.BufferDesc.RefreshRate.Denominator = 1;
 		swapChainDescriptor.BufferDesc.RefreshRate.Numerator = 60;
 		swapChainDescriptor.BufferDesc.Scaling = DXGI_MODE_SCALING::DXGI_MODE_SCALING_UNSPECIFIED;
 		swapChainDescriptor.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER::DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 		swapChainDescriptor.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		swapChainDescriptor.Flags = 0;
-		swapChainDescriptor.OutputWindow = _hWnd;
+		swapChainDescriptor.OutputWindow = reinterpret_cast<HWND>(_window.get_window_handle());
 		swapChainDescriptor.SampleDesc.Count = 1;
 		swapChainDescriptor.SampleDesc.Quality = 0;
 		swapChainDescriptor.SwapEffect = DXGI_SWAP_EFFECT::DXGI_SWAP_EFFECT_DISCARD;
@@ -1577,8 +1632,8 @@ namespace SimpleRenderer
 		}
 
 		D3D11_TEXTURE2D_DESC depthStencilResourceDescriptor{};
-		depthStencilResourceDescriptor.Width = static_cast<UINT>(_windowSize.x);
-		depthStencilResourceDescriptor.Height = static_cast<UINT>(_windowSize.y);
+		depthStencilResourceDescriptor.Width = static_cast<UINT>(_window.get_width());
+		depthStencilResourceDescriptor.Height = static_cast<UINT>(_window.get_height());
 		depthStencilResourceDescriptor.MipLevels = 1;
 		depthStencilResourceDescriptor.ArraySize = 1;
 		depthStencilResourceDescriptor.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -1630,8 +1685,8 @@ namespace SimpleRenderer
 
 		{
 			D3D11_VIEWPORT viewport{};
-			viewport.Width = _windowSize.x;
-			viewport.Height = _windowSize.y;
+			viewport.Width = static_cast<FLOAT>(_window.get_width());
+			viewport.Height = static_cast<FLOAT>(_window.get_height());
 			viewport.MinDepth = 0.0f;
 			viewport.MaxDepth = 1.0f;
 			_deviceContext->RSSetViewports(1, &viewport);
@@ -1670,11 +1725,12 @@ namespace SimpleRenderer
 
 		_deviceContext->OMSetRenderTargets(1, _backBufferRtv.GetAddressOf(), _depthStencilView.Get());
 		_deviceContext->OMSetDepthStencilState(_defaultDepthStencilState.Get(), 0);
+#endif // defined(SR_DIRECTX)
 
 		create_device_create_default_FontData();
 	}
 
-	void Renderer::create_device_create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow])
+	void App::create_device_create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow])
 	{
 		const float glyphTextureWidth = (float)kFontTextureGlyphWidth;
 		const float glyphTextureHeight = (float)kFontTextureGlyphHeight;
@@ -1688,24 +1744,25 @@ namespace SimpleRenderer
 		}
 	}
 
-	void Renderer::create_device_create_default_FontData()
+	void App::create_device_create_default_FontData()
 	{
-		Renderer& renderer = *this;
+		App& app = *this;
 
 		_defaultFontShaderHeaderSet.push_shader_header("DefaultFontShaderHeader", kDefaultFontShaderHeaderCode);
 
-		_defaultFontVertexShader.create(renderer, kDefaultFontVertexShaderCode, ShaderType::VertexShader, "DefaultFontVertexShader", "main", "vs_5_0", &_defaultFontShaderHeaderSet);
+		_defaultFontVertexShader.create(app, kDefaultFontVertexShaderCode, ShaderType::VertexShader, "DefaultFontVertexShader", "main", "vs_5_0", &_defaultFontShaderHeaderSet);
 
 		_defaultFontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("POSITION", 0));
 		_defaultFontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("COLOR", 0));
 		_defaultFontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float2("TEXCOORD", 0));
-		_defaultFontShaderInputLayout.create(renderer, _defaultFontVertexShader);
+		_defaultFontShaderInputLayout.create(app, _defaultFontVertexShader);
 
-		_defaultFontPixelShader.create(renderer, kDefaultFontPixelShaderCode, ShaderType::PixelShader, "DefaultFontPixelShader", "main", "ps_5_0", &_defaultFontShaderHeaderSet);
+		_defaultFontPixelShader.create(app, kDefaultFontPixelShaderCode, ShaderType::PixelShader, "DefaultFontPixelShader", "main", "ps_5_0", &_defaultFontShaderHeaderSet);
 
+		const float2 screenSize(static_cast<float>(_window.get_width()), static_cast<float>(_window.get_height()));
 		DEFAULT_FONT_CB_MATRICES default_font_cb_matrices;
-		default_font_cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(_windowSize);
-		_defaultFontCBMatrices.create_buffer(renderer, ResourceType::ConstantBuffer, &default_font_cb_matrices, sizeof(default_font_cb_matrices), 1);
+		default_font_cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(screenSize);
+		_defaultFontCBMatrices.create_buffer(app, ResourceType::ConstantBuffer, &default_font_cb_matrices, sizeof(default_font_cb_matrices), 1);
 
 		byte bytes[kFontTextureByteCount]{};
 		for (uint32 iter = 0; iter < kFontTextureByteCount; ++iter)
@@ -1715,15 +1772,15 @@ namespace SimpleRenderer
 			const byte byte_ = (kFontTextureRawBitData[byteAt] >> (7 - bitAt)) & 1;
 			bytes[iter] = byte_ * 255;
 		}
-		_defaultFontTexture.create_texture2D(renderer, TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight);
+		_defaultFontTexture.create_texture2D(app, TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight);
 
 		MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(Color(), float2(512, 480), float2(256, 240), 0.0f, _defaultFontVertices, _defaultFontIndices);
 		_defaultFontVertices[0]._texcoord = float2(0, 0);
 		_defaultFontVertices[1]._texcoord = float2(1, 0);
 		_defaultFontVertices[2]._texcoord = float2(0, 1);
 		_defaultFontVertices[3]._texcoord = float2(1, 1);
-		_defaultFontVertexBuffer.create_buffer(renderer, ResourceType::VertexBuffer, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
-		_defaultFontIndexBuffer.create_buffer(renderer, ResourceType::IndexBuffer, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
+		_defaultFontVertexBuffer.create_buffer(app, ResourceType::VertexBuffer, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
+		_defaultFontIndexBuffer.create_buffer(app, ResourceType::IndexBuffer, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
 
 		byte row0[kFontTextureGlyphCountInRow]{ ' ','!','\"','$','#','%','&','\'','(',')','*','+',',','-','.','/' };
 		create_device_create_default_FontData_push_glyphRow(0, row0);
@@ -1744,7 +1801,7 @@ namespace SimpleRenderer
 		create_device_create_default_FontData_push_glyphRow(5, row5);
 	}
 
-	void Renderer::bind_default_FontData()
+	void App::bind_default_FontData()
 	{
 		bind_Shader(_defaultFontVertexShader);
 		bind_Shader(_defaultFontPixelShader);
@@ -2066,22 +2123,33 @@ namespace SimpleRenderer
 	{
 		using namespace SimpleRenderer;
 		constexpr float2 kScreenSize = float2(800, 600);
-		Renderer renderer{ Renderer(kScreenSize, Color(0, 0.5f, 1, 1)) };
+		Window::CreateDesc windowCreateDesc;
+		windowCreateDesc._windowTitle = "SampleMain";
+		windowCreateDesc._width = static_cast<uint32>(kScreenSize.x);
+		windowCreateDesc._height = static_cast<uint32>(kScreenSize.y);
+		Window window;
+		if (window.create(windowCreateDesc) == false)
+		{
+			SR_LOG_ERROR("Failed to create window!");
+			return -1;
+		}
+
+		App app{ App(window, Color(0, 0.5f, 1, 1)) };
 		ShaderHeaderSet shaderHeaderSet;
 		shaderHeaderSet.push_shader_header("StreamData", kSampleShaderHeaderCode_StreamData);
 		Shader vertexShader;
-		vertexShader.create(renderer, kSampleVertexShaderCode, ShaderType::VertexShader, "SampleVertexShader", "main", "vs_5_0", &shaderHeaderSet);
+		vertexShader.create(app, kSampleVertexShaderCode, ShaderType::VertexShader, "SampleVertexShader", "main", "vs_5_0", &shaderHeaderSet);
 		ShaderInputLayout shaderInputLayout;
 		shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("POSITION", 0));
 		shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("COLOR", 0));
 		shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float2("TEXCOORD", 0));
-		shaderInputLayout.create(renderer, vertexShader);
+		shaderInputLayout.create(app, vertexShader);
 		Shader pixelShader;
-		pixelShader.create(renderer, kSamplePixelShaderCode, ShaderType::PixelShader, "SamplePixelShader", "main", "ps_5_0", &shaderHeaderSet);
+		pixelShader.create(app, kSamplePixelShaderCode, ShaderType::PixelShader, "SamplePixelShader", "main", "ps_5_0", &shaderHeaderSet);
 		Resource vscbMatrices;
 		SAMPLE_CB_MATRICES cb_matrices;
 		cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(kScreenSize);
-		vscbMatrices.create_buffer(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(SAMPLE_CB_MATRICES), 1);
+		vscbMatrices.create_buffer(app, ResourceType::ConstantBuffer, &cb_matrices, sizeof(SAMPLE_CB_MATRICES), 1);
 
 		std::vector<SAMPLE_VS_INPUT> vertices;
 		std::vector<uint32> indices;
@@ -2090,29 +2158,29 @@ namespace SimpleRenderer
 		Resource indexBuffer;
 		indexBuffer._type = ResourceType::IndexBuffer;
 
-		while (renderer.is_running())
+		while (app.is_running())
 		{
-			renderer.begin_rendering();
+			app.begin_rendering();
 			{
 				vertices.clear();
 				indices.clear();
 
 				MeshGenerator<SAMPLE_VS_INPUT>::push_2D_circle(Color(1, 1, 0, 1), float2(100, 100), 32.0f, 16, vertices, indices);
-				renderer.bind_ShaderInputLayout(shaderInputLayout);
-				renderer.bind_Shader(vertexShader);
-				renderer.bind_Shader(pixelShader);
-				renderer.bind_ShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
-				renderer.bind_input(vertexBuffer, 0);
-				renderer.bind_input(indexBuffer, 0);
+				app.bind_ShaderInputLayout(shaderInputLayout);
+				app.bind_Shader(vertexShader);
+				app.bind_Shader(pixelShader);
+				app.bind_ShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
+				app.bind_input(vertexBuffer, 0);
+				app.bind_input(indexBuffer, 0);
 				if (vertices.empty() == false)
 				{
-					vertexBuffer.update(renderer, &vertices[0], sizeof(SAMPLE_VS_INPUT), (uint32)vertices.size());
-					indexBuffer.update(renderer, &indices[0], sizeof(uint32), (uint32)indices.size());
-					renderer.draw_indexed((uint32)indices.size());
+					vertexBuffer.update(app, &vertices[0], sizeof(SAMPLE_VS_INPUT), (uint32)vertices.size());
+					indexBuffer.update(app, &indices[0], sizeof(uint32), (uint32)indices.size());
+					app.draw_indexed((uint32)indices.size());
 				}
-				renderer.draw_text(Color(1, 1, 1, 1), "Sample Window", float2(10, 10));
+				app.draw_text(Color(1, 1, 1, 1), "Sample Window", float2(10, 10));
 			}
-			renderer.end_rendering();
+			app.end_rendering();
 		}
 		return 0;
 	}

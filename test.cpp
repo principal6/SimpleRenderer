@@ -445,28 +445,38 @@ int main()
 
 	constexpr float2 kScreenSize = float2(800, 600);
 
-	Renderer renderer{ Renderer(kScreenSize, Color(0, 0.5f, 1, 1)) };
+	Window::CreateDesc windowCreateDesc;
+	windowCreateDesc._windowTitle = "SampleMain";
+	windowCreateDesc._width = static_cast<uint32>(kScreenSize.x);
+	windowCreateDesc._height = static_cast<uint32>(kScreenSize.y);
+	Window window;
+	if (window.create(windowCreateDesc) == false)
+	{
+		SR_LOG_ERROR("Failed to create window!");
+		return -1;
+	}
+	App app{ App(window, Color(0, 0.5f, 1, 1)) };
 
 	ShaderHeaderSet shaderHeaderSet;
 	shaderHeaderSet.push_shader_header("StreamData", kShaderHeaderCode_StreamData);
 
 	Shader vertexShader0;
-	vertexShader0.create(renderer, kVertexShaderCode, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderSet);
+	vertexShader0.create(app, kVertexShaderCode, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderSet);
 
 	ShaderInputLayout shaderInputLayout;
 	shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("POSITION", 0));
 	shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("COLOR", 0));
 	shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float2("TEXCOORD", 0));
-	shaderInputLayout.create(renderer, vertexShader0);
+	shaderInputLayout.create(app, vertexShader0);
 
 	Shader pixelShader0;
-	pixelShader0.create(renderer, kPixelShaderCode, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderSet);
+	pixelShader0.create(app, kPixelShaderCode, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderSet);
 
 	Resource vscbMatrices;
 	CB_MATRICES cb_matrices;
 	cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(kScreenSize);
 	//cb_matrices._projectionMatrix.make_perspective_projection_matrix(kPi * 0.25f, 0.001f, 1000.0f, kScreenSize.x / kScreenSize.y);
-	vscbMatrices.create_buffer(renderer, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
+	vscbMatrices.create_buffer(app, ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
 
 	bool is_shapes_loaded = false;
 	float2 positions_source[2]{};
@@ -493,40 +503,40 @@ int main()
 	const Color blue_color = Color(0, 0, 1, 1);
 	const Color magenta_color = float4(1, 0, 1, 1);
 	const float2 minkowski_shape_offset = kScreenSize * 0.5f + float2(100, 100);
-	while (renderer.is_running())
+	while (app.is_running())
 	{
-		if (renderer.get_keyboard_char() == 'w')
+		if (app.get_keyboard_char() == 'w')
 		{
 			++GJK::g_max_step;
 		}
-		else if (renderer.get_keyboard_char() == 'q')
+		else if (app.get_keyboard_char() == 'q')
 		{
 			if (GJK::g_max_step > 0)
 			{
 				--GJK::g_max_step;
 			}
 		}
-		else if (renderer.get_keyboard_char() == 'e')
+		else if (app.get_keyboard_char() == 'e')
 		{
 			mode = 0;
 		}
-		else if (renderer.get_keyboard_char() == 'r')
+		else if (app.get_keyboard_char() == 'r')
 		{
 			mode = 1;
 		}
-		else if (renderer.get_keyboard_char() == '1')
+		else if (app.get_keyboard_char() == '1')
 		{
 			selection = 0;
 		}
-		else if (renderer.get_keyboard_char() == '2')
+		else if (app.get_keyboard_char() == '2')
 		{
 			selection = 1;
 		}
-		else if (renderer.get_keyboard_char() == '3')
+		else if (app.get_keyboard_char() == '3')
 		{
 			selection = 2;
 		}
-		else if (renderer.get_keyboard_char() == '0')
+		else if (app.get_keyboard_char() == '0')
 		{
 			if (mode == 0)
 			{
@@ -541,7 +551,7 @@ int main()
 			}
 		}
 
-		if (renderer.get_keyboard_up_key() == Renderer::Key::Enter || is_shapes_loaded == false)
+		if (app.get_keyboard_up_key() == Window::Key::Enter || is_shapes_loaded == false)
 		{
 			std::string shapes_content;
 			read_file("shapes.txt", shapes_content);
@@ -598,7 +608,7 @@ int main()
 			is_shapes_loaded = true;
 		}
 
-		if (renderer.is_mouse_L_button_pressed())
+		if (app.is_mouse_L_button_pressed())
 		{
 			if (mode == 0)
 			{
@@ -612,19 +622,19 @@ int main()
 				thetas_prev[selection] = thetas[selection];
 			}
 		}
-		if (renderer.is_mouse_L_button_down())
+		if (app.is_mouse_L_button_down())
 		{
 			if (mode == 0)
 			{
 				if (selection <= 1)
 				{
-					positions[selection].x = positions_prev[selection].x + renderer.get_mouse_move_delta().x;
-					positions[selection].y = positions_prev[selection].y + renderer.get_mouse_move_delta().y;
+					positions[selection].x = positions_prev[selection].x + app.get_mouse_move_delta().x;
+					positions[selection].y = positions_prev[selection].y + app.get_mouse_move_delta().y;
 				}
 			}
 			else
 			{
-				const float theta = (renderer.get_mouse_move_delta().x + renderer.get_mouse_move_delta().y) * 0.03125f;
+				const float theta = (app.get_mouse_move_delta().x + app.get_mouse_move_delta().y) * 0.03125f;
 				thetas[selection] = thetas_prev[selection] + theta;
 			}
 		}
@@ -648,7 +658,7 @@ int main()
 		shape_Minkowski.make_Minkowski_difference_shape(shapes[0], shapes[1]);
 		shape_Minkowski._center = minkowski_space_origin + minkowski_shape_center_in_minkowski_space;
 
-		renderer.begin_rendering();
+		app.begin_rendering();
 		{
 			{
 				vertices.clear();
@@ -694,41 +704,41 @@ int main()
 					MeshGenerator<VS_INPUT>::push_2D_arrow(white_color, minkowski_space_origin + float2(0, 200), minkowski_space_origin - float2(0, 200), 1.0f, 0.0625f, 4.0f, vertices, indices);
 				}
 
-				vertexBuffer.update(renderer, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
-				indexBuffer.update(renderer, &indices[0], sizeof(uint32), (uint32)indices.size());
+				vertexBuffer.update(app, &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
+				indexBuffer.update(app, &indices[0], sizeof(uint32), (uint32)indices.size());
 			}
 
-			renderer.bind_Shader(vertexShader0);
-			renderer.bind_ShaderInputLayout(shaderInputLayout);
-			renderer.bind_Shader(pixelShader0);
-			renderer.bind_input(vertexBuffer, 0);
-			renderer.bind_input(indexBuffer, 0);
-			renderer.bind_ShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
-			renderer.draw_indexed((uint32)indices.size());
+			app.bind_Shader(vertexShader0);
+			app.bind_ShaderInputLayout(shaderInputLayout);
+			app.bind_Shader(pixelShader0);
+			app.bind_input(vertexBuffer, 0);
+			app.bind_input(indexBuffer, 0);
+			app.bind_ShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
+			app.draw_indexed((uint32)indices.size());
 
-			renderer.draw_text(Color(0, 1, 1, 1), "GJK Algorithm Test", float2(10, 10));
-			renderer.draw_text((selection == 0 ? yellow_color : white_color), "1: shape A", float2(10, 40));
-			renderer.draw_text((selection == 1 ? yellow_color : white_color), "2: shape B", float2(10, 60));
-			renderer.draw_text((selection == 2 ? yellow_color : white_color), "3: initial direction", float2(10, 80));
-			renderer.draw_text((selection == 2 ? yellow_color : white_color), "0: reset", float2(10, 100));
+			app.draw_text(Color(0, 1, 1, 1), "GJK Algorithm Test", float2(10, 10));
+			app.draw_text((selection == 0 ? yellow_color : white_color), "1: shape A", float2(10, 40));
+			app.draw_text((selection == 1 ? yellow_color : white_color), "2: shape B", float2(10, 60));
+			app.draw_text((selection == 2 ? yellow_color : white_color), "3: initial direction", float2(10, 80));
+			app.draw_text((selection == 2 ? yellow_color : white_color), "0: reset", float2(10, 100));
 
-			renderer.draw_text((mode == 0 ? yellow_color : white_color), "e: translate", float2(10, 140));
-			renderer.draw_text((mode == 1 ? yellow_color : white_color), "r: rotate", float2(10, 160));
-			renderer.draw_text(white_color, "current gjk_max_step: " + std::to_string(GJK::g_max_step), float2(10, 180));
-			renderer.draw_text(white_color, "q: --gjk_max_step", float2(10, 200));
-			renderer.draw_text(white_color, "w: ++gjk_max_step", float2(10, 220));
+			app.draw_text((mode == 0 ? yellow_color : white_color), "e: translate", float2(10, 140));
+			app.draw_text((mode == 1 ? yellow_color : white_color), "r: rotate", float2(10, 160));
+			app.draw_text(white_color, "current gjk_max_step: " + std::to_string(GJK::g_max_step), float2(10, 180));
+			app.draw_text(white_color, "q: --gjk_max_step", float2(10, 200));
+			app.draw_text(white_color, "w: ++gjk_max_step", float2(10, 220));
 
-			renderer.draw_text(white_color, "ENTER: load shapes from file", float2(10, 260));
+			app.draw_text(white_color, "ENTER: load shapes from file", float2(10, 260));
 
 			//char buffer[8]{};
 			//for (size_t i = 0; i < shapeMinkowski._points.size(); ++i)
 			//{
 			//    ::_itoa_s(static_cast<int>(i), buffer, 10);
 			//    const auto& point = shapeMinkowski._points[i];
-			//    renderer.draw_text(buffer, shapeMinkowski._center + point);
+			//    app.draw_text(buffer, shapeMinkowski._center + point);
 			//}
 		}
-		renderer.end_rendering();
+		app.end_rendering();
 	}
 	return 0;
 }
