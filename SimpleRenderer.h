@@ -970,8 +970,8 @@ namespace SimpleRenderer
 
 	private:
 		void create_device();
-		void create_device_create_default_FontData();
-		void create_device_create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow]);
+		void create_default_FontData();
+		void create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow]);
 		void bind_default_FontData();
 
 	private:
@@ -1727,10 +1727,10 @@ namespace SimpleRenderer
 		_deviceContext->OMSetDepthStencilState(_defaultDepthStencilState.Get(), 0);
 #endif // defined(SR_DIRECTX)
 
-		create_device_create_default_FontData();
+		create_default_FontData();
 	}
 
-	void App::create_device_create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow])
+	void App::create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow])
 	{
 		const float glyphTextureWidth = (float)kFontTextureGlyphWidth;
 		const float glyphTextureHeight = (float)kFontTextureGlyphHeight;
@@ -1744,7 +1744,7 @@ namespace SimpleRenderer
 		}
 	}
 
-	void App::create_device_create_default_FontData()
+	void App::create_default_FontData()
 	{
 		App& app = *this;
 
@@ -1783,22 +1783,22 @@ namespace SimpleRenderer
 		_defaultFontIndexBuffer.create_buffer(app, ResourceType::IndexBuffer, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
 
 		byte row0[kFontTextureGlyphCountInRow]{ ' ','!','\"','$','#','%','&','\'','(',')','*','+',',','-','.','/' };
-		create_device_create_default_FontData_push_glyphRow(0, row0);
+		create_default_FontData_push_glyphRow(0, row0);
 
 		byte row1[kFontTextureGlyphCountInRow]{ '0','1','2','3','4','5','6','7','8','9',':',';','<','=','>','?' };
-		create_device_create_default_FontData_push_glyphRow(1, row1);
+		create_default_FontData_push_glyphRow(1, row1);
 
 		byte row2[kFontTextureGlyphCountInRow]{ '@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O' };
-		create_device_create_default_FontData_push_glyphRow(2, row2);
+		create_default_FontData_push_glyphRow(2, row2);
 
 		byte row3[kFontTextureGlyphCountInRow]{ 'P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_' };
-		create_device_create_default_FontData_push_glyphRow(3, row3);
+		create_default_FontData_push_glyphRow(3, row3);
 
 		byte row4[kFontTextureGlyphCountInRow]{ '`','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o' };
-		create_device_create_default_FontData_push_glyphRow(4, row4);
+		create_default_FontData_push_glyphRow(4, row4);
 
 		byte row5[kFontTextureGlyphCountInRow]{ 'p','q','r','s','t','u','v','w','x','y','z','(','|',')','~', 0 };
-		create_device_create_default_FontData_push_glyphRow(5, row5);
+		create_default_FontData_push_glyphRow(5, row5);
 	}
 
 	void App::bind_default_FontData()
