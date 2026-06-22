@@ -31,6 +31,7 @@ namespace SimpleRenderer
 
 #pragma region Aliases
 	using Microsoft::WRL::ComPtr;
+
 	using int8 = int8_t;
 	using uint8 = uint8_t;
 	using int16 = int16_t;
@@ -39,6 +40,15 @@ namespace SimpleRenderer
 	using uint32 = uint32_t;
 	using int64 = int64_t;
 	using uint64 = uint64_t;
+
+	using i8 = int8;
+	using u8 = uint8;
+	using i16 = int16;
+	using u16 = uint16;
+	using i32 = int32;
+	using u32 = uint32;
+	using i64 = int64;
+	using u64 = uint64;
 #pragma endregion
 
 #pragma region Forward Declaration
@@ -130,11 +140,56 @@ namespace SimpleRenderer
 #pragma endregion
 
 #pragma region Math
+	struct i32v2
+	{
+		constexpr i32v2() : i32v2(0, 0) { __noop; }
+		constexpr explicit i32v2(i32 s) : x{ s }, y{ s } { __noop; }
+		constexpr i32v2(i32 x_, i32 y_) : x{ x_ }, y{ y_ } { __noop; }
+		i32& operator[](const uint32 index) { return f[index]; }
+		const i32& operator[](const uint32 index) const { return f[index]; }
+		constexpr i32v2 operator+() const { return *this; }
+		constexpr i32v2 operator-() const { return i32v2(-x, -y); }
+		i32v2& operator+=(const i32v2& rhs) { x += rhs.x; y += rhs.y; return *this; }
+		i32v2& operator-=(const i32v2& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
+		constexpr i32v2 operator+(const i32v2& rhs) const { return i32v2(x + rhs.x, y + rhs.y); }
+		constexpr i32v2 operator-(const i32v2& rhs) const { return i32v2(x - rhs.x, y - rhs.y); }
+		i32v2& operator*=(const i32 s) { x *= s; y *= s; return *this; }
+		i32v2& operator/=(const i32 s) { x /= s; y /= s; return *this; }
+		constexpr i32v2 operator*(const i32 s) const { return i32v2(x * s, y * s); }
+		constexpr i32v2 operator/(const i32 s) const { return i32v2(x / s, y / s); }
+		union { struct { i32 x; i32 y; }; i32 f[2]; };
+		i32v2 operator*(const i32v2& rhs) { return i32v2(x * rhs.x, y * rhs.y); }
+	};
+	using int2 = i32v2;
+
+	struct u32v2
+	{
+		constexpr u32v2() : u32v2(0, 0) { __noop; }
+		constexpr explicit u32v2(u32 s) : x{ s }, y{ s } { __noop; }
+		constexpr u32v2(u32 x_, u32 y_) : x{ x_ }, y{ y_ } { __noop; }
+		u32& operator[](const uint32 index) { return f[index]; }
+		const u32& operator[](const uint32 index) const { return f[index]; }
+		constexpr u32v2 operator+() const { return *this; }
+		//constexpr u32v2 operator-() const { return u32v2(-x, -y); }
+		u32v2& operator+=(const u32v2& rhs) { x += rhs.x; y += rhs.y; return *this; }
+		u32v2& operator-=(const u32v2& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
+		constexpr u32v2 operator+(const u32v2& rhs) const { return u32v2(x + rhs.x, y + rhs.y); }
+		constexpr u32v2 operator-(const u32v2& rhs) const { return u32v2(x - rhs.x, y - rhs.y); }
+		u32v2& operator*=(const u32 s) { x *= s; y *= s; return *this; }
+		u32v2& operator/=(const u32 s) { x /= s; y /= s; return *this; }
+		constexpr u32v2 operator*(const u32 s) const { return u32v2(x * s, y * s); }
+		constexpr u32v2 operator/(const u32 s) const { return u32v2(x / s, y / s); }
+		union { struct { u32 x; u32 y; }; u32 f[2]; };
+		u32v2 operator*(const u32v2& rhs) { return u32v2(x * rhs.x, y * rhs.y); }
+	};
+	using uint2 = u32v2;
+
 	struct float2
 	{
 		constexpr float2() : float2(0, 0) { __noop; }
 		constexpr explicit float2(float s) : x{ s }, y{ s } { __noop; }
 		constexpr float2(float x_, float y_) : x{ x_ }, y{ y_ } { __noop; }
+		constexpr float2(const uint2 uv) : x{ static_cast<float>(uv.x) }, y{ static_cast<float>(uv.y) } { __noop; }
 		float& operator[](const uint32 index) { return f[index]; }
 		const float& operator[](const uint32 index) const { return f[index]; }
 		constexpr float2 operator+() const { return *this; }
@@ -319,10 +374,10 @@ namespace SimpleRenderer
 		{
 			_11 = 0; _12 = 0; _13 = 0; _14 = 0; _21 = 0; _22 = 0; _23 = 0; _24 = 0; _31 = 0; _32 = 0; _33 = 0; _34 = 0; _41 = 0; _42 = 0; _43 = 0; _44 = 0;
 		}
-		void make_pixel_coordinates_projection_matrix(const float2& screenSize)
+		void make_pixel_coordinates_projection_matrix(const uint2& screenSize)
 		{
 			make_identity();
-			_11 = 2.0f / screenSize.x; _14 = -1.0f; _22 = -2.0f / screenSize.y; _24 = 1.0f;
+			_11 = 2.0f / static_cast<float>(screenSize.x); _14 = -1.0f; _22 = -2.0f / static_cast<float>(screenSize.y); _24 = 1.0f;
 		}
 		void make_perspective_projection_matrix(const float FOVAngle, const float nearDepthAbs, const float farDepthAbs, const float screenWidthOverHeight)
 		{
@@ -864,7 +919,15 @@ namespace SimpleRenderer
 	public:
 		struct CreateDesc
 		{
-			const char* _windowTitle = "SimpleRenderer";
+			CreateDesc() = default;
+			CreateDesc(const char* title, const uint2 size)
+				: _title(title)
+				, _width(size.x)
+				, _height(size.y)
+			{
+				__noop;
+			}
+			const char* _title = "SimpleRenderer";
 			uint32 _width = 800;
 			uint32 _height = 600;
 		};
@@ -915,8 +978,7 @@ namespace SimpleRenderer
 		int32 processMessages();
 
 	public:
-		uint32 get_width() const { return _windowWidth; }
-		uint32 get_height() const { return _windowHeight; }
+		const uint2& get_size() const { return _windowSize; }
 		uint64 get_window_handle() const { return _windowHandle; }
 		const MouseState& get_mouse_state() const { return _mouseState; }
 		const KeyboardState& get_keyboard_state() const { return _keyboardState; }
@@ -924,8 +986,7 @@ namespace SimpleRenderer
 	private:
 		uint64 _instanceHandle = 0;
 		uint64 _windowHandle = 0;
-		uint32 _windowWidth = 0;
-		uint32 _windowHeight = 0;
+		uint2 _windowSize;
 
 	private:
 		MouseState _mouseState;
@@ -1329,11 +1390,17 @@ namespace SimpleRenderer
 		wndClassEx.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
 		wndClassEx.lpfnWndProc = windowProcedure;
 		::RegisterClassEx(&wndClassEx);
-		const HWND typedWindowHandle = ::CreateWindowEx(0, wndClassEx.lpszClassName, TEXT("TEST"), WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, (int)createDesc._width, (int)createDesc._height, nullptr, nullptr, typedInstanceHandle, nullptr);
+
+		wchar_t titleBuffer[256]{};
+		const int titleBufferLength = ::MultiByteToWideChar(CP_ACP, 0, createDesc._title, -1, titleBuffer, 0);
+		if (titleBufferLength >= 256) { _instanceHandle = 0; return false; }
+		::MultiByteToWideChar(CP_ACP, 0, createDesc._title, -1, titleBuffer, titleBufferLength);
+
+		const HWND typedWindowHandle = ::CreateWindowEx(0, wndClassEx.lpszClassName, titleBuffer, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, (int)createDesc._width, (int)createDesc._height, nullptr, nullptr, typedInstanceHandle, nullptr);
 		_windowHandle = reinterpret_cast<uint64>(typedWindowHandle);
 		if (_windowHandle == 0) { _instanceHandle = 0; return false; }
-		_windowWidth = createDesc._width;
-		_windowHeight = createDesc._height;
+		_windowSize.x = createDesc._width;
+		_windowSize.y = createDesc._height;
 		::ShowWindow(typedWindowHandle, SW_SHOWDEFAULT);
 		return true;
 #else
@@ -1603,8 +1670,8 @@ namespace SimpleRenderer
 		DXGI_SWAP_CHAIN_DESC swapChainDescriptor{};
 		swapChainDescriptor.BufferCount = 1;
 		swapChainDescriptor.BufferDesc.Format = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
-		swapChainDescriptor.BufferDesc.Width = static_cast<UINT>(_window.get_width());
-		swapChainDescriptor.BufferDesc.Height = static_cast<UINT>(_window.get_height());
+		swapChainDescriptor.BufferDesc.Width = static_cast<UINT>(_window.get_size().x);
+		swapChainDescriptor.BufferDesc.Height = static_cast<UINT>(_window.get_size().y);
 		swapChainDescriptor.BufferDesc.RefreshRate.Denominator = 1;
 		swapChainDescriptor.BufferDesc.RefreshRate.Numerator = 60;
 		swapChainDescriptor.BufferDesc.Scaling = DXGI_MODE_SCALING::DXGI_MODE_SCALING_UNSPECIFIED;
@@ -1632,8 +1699,8 @@ namespace SimpleRenderer
 		}
 
 		D3D11_TEXTURE2D_DESC depthStencilResourceDescriptor{};
-		depthStencilResourceDescriptor.Width = static_cast<UINT>(_window.get_width());
-		depthStencilResourceDescriptor.Height = static_cast<UINT>(_window.get_height());
+		depthStencilResourceDescriptor.Width = static_cast<UINT>(_window.get_size().x);
+		depthStencilResourceDescriptor.Height = static_cast<UINT>(_window.get_size().y);
 		depthStencilResourceDescriptor.MipLevels = 1;
 		depthStencilResourceDescriptor.ArraySize = 1;
 		depthStencilResourceDescriptor.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -1685,8 +1752,8 @@ namespace SimpleRenderer
 
 		{
 			D3D11_VIEWPORT viewport{};
-			viewport.Width = static_cast<FLOAT>(_window.get_width());
-			viewport.Height = static_cast<FLOAT>(_window.get_height());
+			viewport.Width = static_cast<FLOAT>(_window.get_size().x);
+			viewport.Height = static_cast<FLOAT>(_window.get_size().y);
 			viewport.MinDepth = 0.0f;
 			viewport.MaxDepth = 1.0f;
 			_deviceContext->RSSetViewports(1, &viewport);
@@ -1759,7 +1826,7 @@ namespace SimpleRenderer
 
 		_defaultFontPixelShader.create(app, kDefaultFontPixelShaderCode, ShaderType::PixelShader, "DefaultFontPixelShader", "main", "ps_5_0", &_defaultFontShaderHeaderSet);
 
-		const float2 screenSize(static_cast<float>(_window.get_width()), static_cast<float>(_window.get_height()));
+		const uint2& screenSize = _window.get_size();
 		DEFAULT_FONT_CB_MATRICES default_font_cb_matrices;
 		default_font_cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(screenSize);
 		_defaultFontCBMatrices.create_buffer(app, ResourceType::ConstantBuffer, &default_font_cb_matrices, sizeof(default_font_cb_matrices), 1);
@@ -2122,13 +2189,9 @@ namespace SimpleRenderer
 	int SampleMain()
 	{
 		using namespace SimpleRenderer;
-		constexpr float2 kScreenSize = float2(800, 600);
-		Window::CreateDesc windowCreateDesc;
-		windowCreateDesc._windowTitle = "SampleMain";
-		windowCreateDesc._width = static_cast<uint32>(kScreenSize.x);
-		windowCreateDesc._height = static_cast<uint32>(kScreenSize.y);
+		constexpr uint2 kScreenSize = uint2(800, 600);
 		Window window;
-		if (window.create(windowCreateDesc) == false)
+		if (window.create(Window::CreateDesc("SampleMain", kScreenSize)) == false)
 		{
 			SR_LOG_ERROR("Failed to create window!");
 			return -1;

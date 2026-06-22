@@ -442,15 +442,9 @@ namespace GJK
 int main()
 {
 	using namespace SimpleRenderer;
-
-	constexpr float2 kScreenSize = float2(800, 600);
-
-	Window::CreateDesc windowCreateDesc;
-	windowCreateDesc._windowTitle = "SampleMain";
-	windowCreateDesc._width = static_cast<uint32>(kScreenSize.x);
-	windowCreateDesc._height = static_cast<uint32>(kScreenSize.y);
+	constexpr uint2 kScreenSize = uint2(800, 600);
 	Window window;
-	if (window.create(windowCreateDesc) == false)
+	if (window.create(Window::CreateDesc("SampleMain", kScreenSize)) == false)
 	{
 		SR_LOG_ERROR("Failed to create window!");
 		return -1;
@@ -502,7 +496,7 @@ int main()
 	const Color dark_gray_color = Color(0.25f, 0.25f, 0.25f, 1);
 	const Color blue_color = Color(0, 0, 1, 1);
 	const Color magenta_color = float4(1, 0, 1, 1);
-	const float2 minkowski_shape_offset = kScreenSize * 0.5f + float2(100, 100);
+	const float2 minkowski_shape_offset = float2(kScreenSize) * 0.5f + float2(100, 100);
 	while (app.is_running())
 	{
 		if (app.get_keyboard_char() == 'w')
@@ -654,7 +648,7 @@ int main()
 		}
 
 		const float2 minkowski_shape_center_in_minkowski_space = shapes[0]._center - shapes[1]._center;
-		const float2 minkowski_space_origin = kScreenSize * 0.5f + float2(0, 120);
+		const float2 minkowski_space_origin = float2(kScreenSize) * 0.5f + float2(0, 120);
 		shape_Minkowski.make_Minkowski_difference_shape(shapes[0], shapes[1]);
 		shape_Minkowski._center = minkowski_space_origin + minkowski_shape_center_in_minkowski_space;
 
