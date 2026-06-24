@@ -495,7 +495,7 @@ int main()
 	const Color yellow_color = Color(1, 1, 0, 1);
 	const Color dark_gray_color = Color(0.25f, 0.25f, 0.25f, 1);
 	const Color blue_color = Color(0, 0, 1, 1);
-	const Color magenta_color = float4(1, 0, 1, 1);
+	const Color magenta_color = Color(1, 0, 1, 1);
 	const float2 minkowski_shape_offset = float2(kScreenSize) * 0.5f + float2(100, 100);
 	while (app.is_running())
 	{
