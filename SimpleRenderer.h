@@ -735,10 +735,6 @@ namespace SimpleRenderer
 		static uint32 __compute_element_stride(const TextureFormat& format);
 
 	public:
-		ID3D11Resource* get_resource() const { return _resource.Get(); }
-		ID3D11View* get_view() const { return _view.Get(); }
-
-	public:
 		ResourceType _type;
 		TextureFormat _format;
 		uint32 _byteSize;
@@ -1474,13 +1470,15 @@ namespace SimpleRenderer
 			return false;
 		}
 
-		if (FAILED(_device->CreateInputLayout(&shaderInputLayout._inputElements[0], static_cast<UINT>(shaderInputLayout._inputElements.size()),
+#if defined(SR_DIRECTX)
+		if (SUCCEEDED(_device->CreateInputLayout(&shaderInputLayout._inputElements[0], static_cast<UINT>(shaderInputLayout._inputElements.size()),
 			vertexShader._shaderBlob->GetBufferPointer(), vertexShader._shaderBlob->GetBufferSize(), shaderInputLayout._inputLayout.ReleaseAndGetAddressOf())))
 		{
-			SR_LOG_ERROR("Failed to create ShaderInputLayout");
-			return false;
+			return true;
 		}
-		return true;
+#endif // defined(SR_DIRECTX)
+		SR_LOG_ERROR("Failed to create ShaderInputLayout");
+		return false;
 	}
 
 	bool RenderDevice::create_Shader(const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet, Shader& shader)
@@ -1503,8 +1501,9 @@ namespace SimpleRenderer
 			return false;
 		}
 
+#if defined(SR_DIRECTX)
 		const UINT debugFlag = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-		HRESULT result = D3DCompile(sourceCode, ::strlen(sourceCode), shaderIdentifier, nullptr, shaderHeaderSet, entryPoint, target, debugFlag, 0, shader._shaderBlob.ReleaseAndGetAddressOf(), shader._errorMessageBlob.ReleaseAndGetAddressOf());
+		HRESULT result = ::D3DCompile(sourceCode, ::strlen(sourceCode), shaderIdentifier, nullptr, shaderHeaderSet, entryPoint, target, debugFlag, 0, shader._shaderBlob.ReleaseAndGetAddressOf(), shader._errorMessageBlob.ReleaseAndGetAddressOf());
 		if (FAILED(result))
 		{
 			std::string errorMessages(reinterpret_cast<char*>(shader._errorMessageBlob->GetBufferPointer()));
@@ -1533,10 +1532,14 @@ namespace SimpleRenderer
 
 		shader._type = shaderType;
 		return true;
+#else
+		return false;
+#endif // defined(SR_DIRECTX)
 	}
 
 	bool RenderDevice::create_texture2D(const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height, Resource& resource)
 	{
+#if defined(SR_DIRECTX)
 		ComPtr<ID3D11Resource> newResource;
 		D3D11_TEXTURE2D_DESC texture2DDescriptor{};
 		texture2DDescriptor.Width = width;
@@ -1574,6 +1577,7 @@ namespace SimpleRenderer
 				return true;
 			}
 		}
+#endif // defined(SR_DIRECTX)
 		return false;
 	}
 
@@ -1585,6 +1589,7 @@ namespace SimpleRenderer
 			return false;
 		}
 
+#if defined(SR_DIRECTX)
 		ComPtr<ID3D11Resource> newResource;
 		D3D11_BUFFER_DESC bufferDescriptor{};
 		bufferDescriptor.Usage = D3D11_USAGE::D3D11_USAGE_DYNAMIC;
@@ -1605,6 +1610,7 @@ namespace SimpleRenderer
 			std::swap(resource._resource, newResource);
 			return true;
 		}
+#endif // defined(SR_DIRECTX)
 		return false;
 	}
 
@@ -1615,6 +1621,7 @@ namespace SimpleRenderer
 			return create_buffer(resource._type, content, elementStride, elementCount, resource);
 		}
 
+#if defined(SR_DIRECTX)
 		class SafeResourceMapper
 		{
 		public:
@@ -1660,15 +1667,17 @@ namespace SimpleRenderer
 			safeResourceMapper.set(content, elementStride * elementCount);
 			return true;
 		}
+#endif // defined(SR_DIRECTX)
 		return false;
 	}
 
 	void RenderDevice::bind_ShaderInputLayout(ShaderInputLayout& shaderInputLayout)
 	{
 		_is_InputLayout_bound = true;
-
+#if defined(SR_DIRECTX)
 		if (shaderInputLayout._inputLayout.Get() != nullptr)
 			_deviceContext->IASetInputLayout(shaderInputLayout._inputLayout.Get());
+#endif // defined(SR_DIRECTX)
 	}
 
 	void RenderDevice::bind_Shader(Shader& shader)
@@ -1676,12 +1685,16 @@ namespace SimpleRenderer
 		if (shader._type == ShaderType::VertexShader)
 		{
 			_is_VS_bound = true;
+#if defined(SR_DIRECTX)
 			_deviceContext->VSSetShader(static_cast<ID3D11VertexShader*>(shader._shader.Get()), nullptr, 0);
+#endif // defined(SR_DIRECTX)
 		}
 		else if (shader._type == ShaderType::PixelShader)
 		{
 			_is_PS_bound = true;
+#if defined(SR_DIRECTX)
 			_deviceContext->PSSetShader(static_cast<ID3D11PixelShader*>(shader._shader.Get()), nullptr, 0);
+#endif // defined(SR_DIRECTX)
 		}
 	}
 
@@ -1690,17 +1703,19 @@ namespace SimpleRenderer
 		if (resource._type == ResourceType::VertexBuffer)
 		{
 			_is_VertexBuffer_bound = true;
-
-			ID3D11Buffer* buffers[1]{ static_cast<ID3D11Buffer*>(resource.get_resource()) };
+#if defined(SR_DIRECTX)
+			ID3D11Buffer* buffers[1]{ static_cast<ID3D11Buffer*>(resource._resource.Get()) };
 			uint32 strides[1]{ resource._elementStride };
 			uint32 offsets[1]{ 0 };
 			_deviceContext->IASetVertexBuffers(slot, 1, buffers, strides, offsets);
+#endif // defined(SR_DIRECTX)
 		}
 		else if (resource._type == ResourceType::IndexBuffer)
 		{
 			_is_IndexBuffer_bound = true;
-
-			_deviceContext->IASetIndexBuffer(static_cast<ID3D11Buffer*>(resource.get_resource()), Resource::kIndexBufferFormat, 0);
+#if defined(SR_DIRECTX)
+			_deviceContext->IASetIndexBuffer(static_cast<ID3D11Buffer*>(resource._resource.Get()), Resource::kIndexBufferFormat, 0);
+#endif // defined(SR_DIRECTX)
 		}
 		else
 		{
@@ -1712,7 +1727,8 @@ namespace SimpleRenderer
 	{
 		if (resource._type == ResourceType::ConstantBuffer)
 		{
-			ID3D11Buffer* buffers[1]{ static_cast<ID3D11Buffer*>(resource.get_resource()) };
+#if defined(SR_DIRECTX)
+			ID3D11Buffer* buffers[1]{ static_cast<ID3D11Buffer*>(resource._resource.Get()) };
 			if (shaderType == ShaderType::VertexShader)
 			{
 				_deviceContext->VSSetConstantBuffers(slot, 1, buffers);
@@ -1725,10 +1741,12 @@ namespace SimpleRenderer
 			{
 				SR_LOG_ERROR("This shader type is not supported yet!");
 			}
+#endif // defined(SR_DIRECTX)
 		}
 		else if (resource._type == ResourceType::Teture2D)
 		{
-			ID3D11ShaderResourceView* views[1]{ static_cast<ID3D11ShaderResourceView*>(resource.get_view()) };
+#if defined(SR_DIRECTX)
+			ID3D11ShaderResourceView* views[1]{ static_cast<ID3D11ShaderResourceView*>(resource._view.Get()) };
 			if (shaderType == ShaderType::VertexShader)
 			{
 				_deviceContext->VSSetShaderResources(slot, 1, views);
@@ -1741,6 +1759,7 @@ namespace SimpleRenderer
 			{
 				SR_LOG_ERROR("This shader type is not supported yet!");
 			}
+#endif // defined(SR_DIRECTX)
 		}
 		else
 		{
@@ -1750,13 +1769,17 @@ namespace SimpleRenderer
 
 	void RenderDevice::use_triangle_primitive()
 	{
+#if defined(SR_DIRECTX)
 		_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+#endif // defined(SR_DIRECTX)
 	}
 
 	void RenderDevice::begin_rendering(const Color& clearColor)
 	{
+#if defined(SR_DIRECTX)
 		_deviceContext->ClearRenderTargetView(_backBufferRtv.Get(), clearColor.f);
 		_deviceContext->ClearDepthStencilView(_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+#endif // defined(SR_DIRECTX)
 		use_triangle_primitive();
 	}
 
@@ -1783,7 +1806,9 @@ namespace SimpleRenderer
 			return;
 		}
 
+#if defined(SR_DIRECTX)
 		_deviceContext->DrawIndexed(indexCount, 0, 0);
+#endif // defined(SR_DIRECTX)
 	}
 
 	void RenderDevice::draw(const uint32 vertexCount)
@@ -1794,12 +1819,16 @@ namespace SimpleRenderer
 			return;
 		}
 
+#if defined(SR_DIRECTX)
 		_deviceContext->Draw(vertexCount, 0);
+#endif // defined(SR_DIRECTX)
 	}
 
 	void RenderDevice::end_rendering()
 	{
+#if defined(SR_DIRECTX)
 		_swapChain->Present(0, 0);
+#endif // defined(SR_DIRECTX)
 	}
 
 	bool App::is_running()
