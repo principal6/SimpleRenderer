@@ -52,9 +52,10 @@ namespace SimpleRenderer
 #pragma endregion
 
 #pragma region Forward Declaration
+	class App;
+	class RenderDevice;
 	struct float4;
 	struct quaternion;
-	class App;
 	struct Shader;
 #pragma endregion
 
@@ -643,6 +644,7 @@ namespace SimpleRenderer
 
 	struct ShaderInputLayout
 	{
+		friend RenderDevice;
 		struct InputElement
 		{
 			DXGI_FORMAT _format = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -661,7 +663,7 @@ namespace SimpleRenderer
 		void clear_InputElements();
 		void push_InputElement(const InputElement& newInputElement);
 
-		bool create(App& app, const Shader& vertexShader);
+		bool create_InputLayout(RenderDevice& renderDevice, const Shader& vertexShader);
 
 	private:
 		static InputElement __create_InputElement_common(const DXGI_FORMAT format, const char* const semanticName, const uint32 semanticIndex)
@@ -702,7 +704,8 @@ namespace SimpleRenderer
 
 	struct Shader
 	{
-		bool create(App& app, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet = nullptr);
+		friend RenderDevice;
+		bool create_Shader(RenderDevice& renderDevice, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet = nullptr);
 
 		ShaderType _type = ShaderType::VertexShader;
 		ComPtr<ID3D10Blob> _shaderBlob;
@@ -713,6 +716,7 @@ namespace SimpleRenderer
 	// Buffer or Texture
 	class Resource
 	{
+		friend RenderDevice;
 	public:
 		//static constexpr DXGI_FORMAT kIndexBufferFormat = DXGI_FORMAT::DXGI_FORMAT_R16_UINT;
 		static constexpr DXGI_FORMAT kIndexBufferFormat = DXGI_FORMAT::DXGI_FORMAT_R32_UINT;
@@ -722,9 +726,9 @@ namespace SimpleRenderer
 		~Resource() = default;
 
 	public:
-		bool create_texture2D(App& app, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height);
-		bool create_buffer(App& app, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount);
-		bool update(App& app, const void* const content, const uint32 elementStride, const uint32 elementCount);
+		bool create_texture2D(RenderDevice& renderDevice, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height);
+		bool create_buffer(RenderDevice& renderDevice, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount);
+		bool update_resource(RenderDevice& renderDevice, const void* const content, const uint32 elementStride, const uint32 elementCount);
 
 	private:
 		static DXGI_FORMAT __convert_to_DXGI_FORMAT(const TextureFormat& format);
@@ -993,14 +997,22 @@ namespace SimpleRenderer
 		KeyboardState _keyboardState;
 	};
 
-	class App final
+	class RenderDevice
 	{
 	public:
-		App(Window& window, const Color& clearColor) : _window{ window }, _clearColor{ clearColor } { create_device(); }
-		~App() = default;
+		RenderDevice() = default;
+		~RenderDevice() = default;
 
 	public:
-		bool is_running();
+		bool create_device(const Window& window);
+		void destroy_device() {}
+
+	public:
+		bool create_ShaderInputLayout(const Shader& vertexShader, ShaderInputLayout& shaderInputLayout);
+		bool create_Shader(const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet, Shader& shader);
+		bool create_texture2D(const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height, Resource& resource);
+		bool create_buffer(const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount, Resource& resource);
+		bool update_resource(const void* const content, const uint32 elementStride, const uint32 elementCount, Resource& resource);
 
 	public:
 		void bind_ShaderInputLayout(ShaderInputLayout& shaderInputLayout);
@@ -1010,36 +1022,13 @@ namespace SimpleRenderer
 		void use_triangle_primitive();
 
 	public:
-		void begin_rendering();
+		void begin_rendering(const Color& clearColor);
 		void draw(const uint32 vertexCount);
 		void draw_indexed(const uint32 indexCount);
-		void draw_text(const Color& color, const std::string& text, const float2& position);
 		void end_rendering();
 
-	public:
-		ID3D11Device* get_device() const { return _device.Get(); }
-		ID3D11DeviceContext* get_device_context() const { return _deviceContext.Get(); }
-
-	public:
-		bool is_mouse_L_button_down() const { return _window.get_mouse_state()._is_L_button_down; }
-		bool is_mouse_L_button_pressed() const { return _window.get_mouse_state()._is_L_button_pressed; }
-		bool is_mouse_L_button_released() const { return _window.get_mouse_state()._is_L_button_released; }
-		bool is_mouse_R_button_released() const { return _window.get_mouse_state()._is_R_button_released; }
-		float2 get_mouse_move_delta() const { return _window.get_mouse_state()._position - _window.get_mouse_state()._L_pressed_position; }
-		char get_keyboard_char() const { return _window.get_keyboard_state()._char; }
-		Window::Key get_keyboard_up_key() const { return _window.get_keyboard_state()._up_key; }
-
 	private:
-		void create_device();
-		void create_default_FontData();
-		void create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow]);
-		void bind_default_FontData();
-
-	private:
-		Window& _window;
-		Color _clearColor;
-
-	private:
+#if defined(SR_DIRECTX)
 		ComPtr<IDXGISwapChain> _swapChain;
 		ComPtr<ID3D11Device> _device;
 		ComPtr<ID3D11DeviceContext> _deviceContext;
@@ -1050,6 +1039,7 @@ namespace SimpleRenderer
 		ComPtr<ID3D11DepthStencilState> _defaultDepthStencilState;
 		ComPtr<ID3D11SamplerState> _defaultSamplerState;
 		ComPtr<ID3D11BlendState> _defaultBlendState;
+#endif // defined(SR_DIRECTX)
 
 	private:
 		bool _is_InputLayout_bound = false;
@@ -1057,7 +1047,46 @@ namespace SimpleRenderer
 		bool _is_PS_bound = false;
 		bool _is_VertexBuffer_bound = false;
 		bool _is_IndexBuffer_bound = false;
+	};
 
+	class App final
+	{
+	public:
+		App(Window& window, const Color& clearColor) : _window{ window }, _clearColor{ clearColor } { _renderDevice.create_device(_window); create_default_FontData(); }
+		~App() = default;
+
+	public:
+		bool is_running();
+
+	public:
+		void begin_rendering();
+		void draw(const uint32 vertexCount);
+		void draw_indexed(const uint32 indexCount);
+		void draw_text(const Color& color, const std::string& text, const float2& position);
+		void end_rendering();
+
+	public:
+		bool is_mouse_L_button_down() const { return _window.get_mouse_state()._is_L_button_down; }
+		bool is_mouse_L_button_pressed() const { return _window.get_mouse_state()._is_L_button_pressed; }
+		bool is_mouse_L_button_released() const { return _window.get_mouse_state()._is_L_button_released; }
+		bool is_mouse_R_button_released() const { return _window.get_mouse_state()._is_R_button_released; }
+		float2 get_mouse_move_delta() const { return _window.get_mouse_state()._position - _window.get_mouse_state()._L_pressed_position; }
+		char get_keyboard_char() const { return _window.get_keyboard_state()._char; }
+		Window::Key get_keyboard_up_key() const { return _window.get_keyboard_state()._up_key; }
+		RenderDevice& get_RenderDevice() { return _renderDevice; }
+
+	private:
+		void create_default_FontData();
+		void create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow]);
+		void bind_default_FontData();
+
+	private:
+		Window& _window;
+		Color _clearColor;
+
+	private:
+		RenderDevice _renderDevice;
+	
 	private:
 		ShaderHeaderSet _defaultFontShaderHeaderSet;
 		Shader _defaultFontVertexShader;
@@ -1139,201 +1168,29 @@ namespace SimpleRenderer
 		_inputTotalByteSize += compute_InputElement_byte_size(inputElementDesc);
 	}
 
-	bool ShaderInputLayout::create(App& app, const Shader& vertexShader)
+	bool ShaderInputLayout::create_InputLayout(RenderDevice& renderDevice, const Shader& vertexShader)
 	{
-		if (_inputElements.empty())
-		{
-			SR_LOG_ERROR("Push input elements before creating ShaderInputLayout!");
-			return false;
-		}
-
-		if (FAILED(app.get_device()->CreateInputLayout(&_inputElements[0], static_cast<UINT>(_inputElements.size()),
-			vertexShader._shaderBlob->GetBufferPointer(), vertexShader._shaderBlob->GetBufferSize(), _inputLayout.ReleaseAndGetAddressOf())))
-		{
-			SR_LOG_ERROR("Failed to create ShaderInputLayout");
-			return false;
-		}
-		return true;
+		return renderDevice.create_ShaderInputLayout(vertexShader, *this);
 	}
 
-	bool Shader::create(App& app, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet)
+	bool Shader::create_Shader(RenderDevice& renderDevice, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet)
 	{
-		if (sourceCode == nullptr)
-		{
-			SR_LOG_ERROR("Must exist source code!");
-			return false;
-		}
-
-		if (entryPoint == nullptr)
-		{
-			SR_LOG_ERROR("Must specify entry point!");
-			return false;
-		}
-
-		if (target == nullptr)
-		{
-			SR_LOG_ERROR("Must specify target!");
-			return false;
-		}
-
-		_type = shaderType;
-
-		const UINT debugFlag = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-		HRESULT result = D3DCompile(sourceCode, ::strlen(sourceCode), shaderIdentifier, nullptr, shaderHeaderSet, entryPoint, target, debugFlag, 0, _shaderBlob.ReleaseAndGetAddressOf(), _errorMessageBlob.ReleaseAndGetAddressOf());
-		if (FAILED(result))
-		{
-			std::string errorMessages(reinterpret_cast<char*>(_errorMessageBlob->GetBufferPointer()));
-			SR_LOG_ERROR("Shader compile failed.");
-			return false;
-		}
-
-		if (shaderType == ShaderType::VertexShader)
-		{
-			if (FAILED(app.get_device()->CreateVertexShader(_shaderBlob->GetBufferPointer(), _shaderBlob->GetBufferSize(), NULL, reinterpret_cast<ID3D11VertexShader**>(_shader.ReleaseAndGetAddressOf()))))
-			{
-				return false;
-			}
-			return true;
-		}
-		else if (shaderType == ShaderType::PixelShader)
-		{
-			if (FAILED(app.get_device()->CreatePixelShader(_shaderBlob->GetBufferPointer(), _shaderBlob->GetBufferSize(), NULL, reinterpret_cast<ID3D11PixelShader**>(_shader.ReleaseAndGetAddressOf()))))
-			{
-				return false;
-			}
-			return true;
-		}
-		return false;
+		return renderDevice.create_Shader(sourceCode, shaderType, shaderIdentifier, entryPoint, target, shaderHeaderSet, *this);
 	}
 
-	bool Resource::create_texture2D(App& app, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height)
+	bool Resource::create_texture2D(RenderDevice& renderDevice, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height)
 	{
-		ComPtr<ID3D11Resource> newResource;
-		D3D11_TEXTURE2D_DESC texture2DDescriptor{};
-		texture2DDescriptor.Width = width;
-		texture2DDescriptor.Height = height;
-		texture2DDescriptor.MipLevels = 1;
-		texture2DDescriptor.ArraySize = 1;
-		texture2DDescriptor.Format = __convert_to_DXGI_FORMAT(format);
-		texture2DDescriptor.SampleDesc.Count = 1;
-		texture2DDescriptor.Usage = D3D11_USAGE::D3D11_USAGE_DEFAULT;
-		texture2DDescriptor.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
-		texture2DDescriptor.CPUAccessFlags = 0;
-		const uint32 elementStride = __compute_element_stride(format);
-		D3D11_SUBRESOURCE_DATA subResource{};
-		subResource.pSysMem = resourceContent;
-		subResource.SysMemPitch = texture2DDescriptor.Width * elementStride;
-		subResource.SysMemSlicePitch = 0;
-		if (SUCCEEDED(app.get_device()->CreateTexture2D(&texture2DDescriptor, &subResource, reinterpret_cast<ID3D11Texture2D**>(newResource.ReleaseAndGetAddressOf()))))
-		{
-			D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDescriptor{};
-			shaderResourceViewDescriptor.Format = texture2DDescriptor.Format;
-			shaderResourceViewDescriptor.ViewDimension = D3D11_SRV_DIMENSION::D3D11_SRV_DIMENSION_TEXTURE2D;
-			shaderResourceViewDescriptor.Texture2D.MipLevels = texture2DDescriptor.MipLevels;
-			shaderResourceViewDescriptor.Texture2D.MostDetailedMip = 0;
-			if (SUCCEEDED(app.get_device()->CreateShaderResourceView(newResource.Get(), &shaderResourceViewDescriptor, reinterpret_cast<ID3D11ShaderResourceView**>(_view.ReleaseAndGetAddressOf()))))
-			{
-				_type = ResourceType::Teture2D;
-				_format = format;
-
-				_elementStride = elementStride;
-				_elementMaxCount = texture2DDescriptor.Width * texture2DDescriptor.Height;
-				//_resourceCapacity = _elementStride * _elementMaxCount;
-
-				_width = width;
-				//_height = _width / _elementMaxCount;
-
-				std::swap(_resource, newResource);
-				return true;
-			}
-		}
-		return false;
+		return renderDevice.create_texture2D(format, resourceContent, width, height, *this);
 	}
 
-	bool Resource::create_buffer(App& app, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount)
+	bool Resource::create_buffer(RenderDevice& renderDevice, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount)
 	{
-		if (type == ResourceType::Teture2D)
-		{
-			SR_ASSERT(false, "Use create_texture2D() instead!");
-			return false;
-		}
-
-		ComPtr<ID3D11Resource> newResource;
-		D3D11_BUFFER_DESC bufferDescriptor{};
-		bufferDescriptor.Usage = D3D11_USAGE::D3D11_USAGE_DYNAMIC;
-		bufferDescriptor.ByteWidth = elementStride * elementCount;
-		bufferDescriptor.BindFlags = D3D11_BIND_FLAG(1 << (uint32)type); // !!! CAUTION !!!
-		bufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::D3D11_CPU_ACCESS_WRITE;
-		bufferDescriptor.MiscFlags = 0;
-		bufferDescriptor.StructureByteStride = 0;
-		D3D11_SUBRESOURCE_DATA subresourceData{};
-		subresourceData.pSysMem = content;
-		if (SUCCEEDED(app.get_device()->CreateBuffer(&bufferDescriptor, (content != nullptr) ? &subresourceData : nullptr, reinterpret_cast<ID3D11Buffer**>(newResource.ReleaseAndGetAddressOf()))))
-		{
-			_type = type;
-			_byteSize = bufferDescriptor.ByteWidth;
-			_elementStride = elementStride;
-			_elementMaxCount = elementCount;
-
-			std::swap(_resource, newResource);
-			return true;
-		}
-		return false;
+		return renderDevice.create_buffer(type, content, elementStride, elementCount, *this);
 	}
 
-	bool Resource::update(App& app, const void* const content, const uint32 elementStride, const uint32 elementCount)
+	bool Resource::update_resource(RenderDevice& renderDevice, const void* const content, const uint32 elementStride, const uint32 elementCount)
 	{
-		if (elementCount > _elementMaxCount)
-		{
-			return create_buffer(app, _type, content, elementStride, elementCount);
-		}
-
-		class SafeResourceMapper
-		{
-		public:
-			SafeResourceMapper(App& app, ID3D11Resource* const resource, const uint32 subresource)
-				: _app{ app }
-				, _resource{ resource }
-				, _subresource{ subresource }
-				, _mappedSubresource{}
-			{
-				if (FAILED(_app.get_device_context()->Map(_resource, _subresource, D3D11_MAP::D3D11_MAP_WRITE_DISCARD, 0, &_mappedSubresource)))
-				{
-					_mappedSubresource.pData = nullptr;
-					_mappedSubresource.DepthPitch = 0;
-					_mappedSubresource.RowPitch = 0;
-				}
-			}
-			~SafeResourceMapper()
-			{
-				if (isValid() == true)
-				{
-					_app.get_device_context()->Unmap(_resource, _subresource);
-				}
-			}
-			bool isValid() const noexcept
-			{
-				return _mappedSubresource.pData != nullptr;
-			}
-			void set(const void* const data, const uint32 size) noexcept
-			{
-				::memcpy(_mappedSubresource.pData, data, size);
-			}
-
-		private:
-			App& _app;
-			ID3D11Resource* const _resource;
-			const uint32 _subresource;
-			D3D11_MAPPED_SUBRESOURCE _mappedSubresource;
-		};
-
-		SafeResourceMapper safeResourceMapper(app, _resource.Get(), 0);
-		if (safeResourceMapper.isValid())
-		{
-			safeResourceMapper.set(content, elementStride * elementCount);
-			return true;
-		}
-		return false;
+		return renderDevice.update_resource(content, elementStride, elementCount, *this);
 	}
 
 	DXGI_FORMAT Resource::__convert_to_DXGI_FORMAT(const TextureFormat& format)
@@ -1476,16 +1333,337 @@ namespace SimpleRenderer
 		return 0;
 	}
 
-	bool App::is_running()
+	bool RenderDevice::create_device(const Window& window)
 	{
-		if (_window.processMessages() < 0)
+#if defined(SR_DIRECTX)
+		DXGI_SWAP_CHAIN_DESC swapChainDescriptor{};
+		swapChainDescriptor.BufferCount = 1;
+		swapChainDescriptor.BufferDesc.Format = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
+		swapChainDescriptor.BufferDesc.Width = static_cast<UINT>(window.get_size().x);
+		swapChainDescriptor.BufferDesc.Height = static_cast<UINT>(window.get_size().y);
+		swapChainDescriptor.BufferDesc.RefreshRate.Denominator = 1;
+		swapChainDescriptor.BufferDesc.RefreshRate.Numerator = 60;
+		swapChainDescriptor.BufferDesc.Scaling = DXGI_MODE_SCALING::DXGI_MODE_SCALING_UNSPECIFIED;
+		swapChainDescriptor.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER::DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+		swapChainDescriptor.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swapChainDescriptor.Flags = 0;
+		swapChainDescriptor.OutputWindow = reinterpret_cast<HWND>(window.get_window_handle());
+		swapChainDescriptor.SampleDesc.Count = 1;
+		swapChainDescriptor.SampleDesc.Quality = 0;
+		swapChainDescriptor.SwapEffect = DXGI_SWAP_EFFECT::DXGI_SWAP_EFFECT_DISCARD;
+		swapChainDescriptor.Windowed = TRUE;
+		if (FAILED(::D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE::D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION,
+			&swapChainDescriptor, _swapChain.ReleaseAndGetAddressOf(), _device.ReleaseAndGetAddressOf(), nullptr, _deviceContext.ReleaseAndGetAddressOf())))
 		{
+			SR_LOG_ERROR("Failed to create Device and SwapChain.");
+			return false;
+		}
+
+		ComPtr<ID3D11Texture2D> backBuffer;
+		_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.ReleaseAndGetAddressOf()));
+		if (FAILED(_device->CreateRenderTargetView(backBuffer.Get(), nullptr, _backBufferRtv.ReleaseAndGetAddressOf())))
+		{
+			SR_LOG_ERROR("Failed to get BackBuffer.");
+			return false;
+		}
+
+		D3D11_TEXTURE2D_DESC depthStencilResourceDescriptor{};
+		depthStencilResourceDescriptor.Width = static_cast<UINT>(window.get_size().x);
+		depthStencilResourceDescriptor.Height = static_cast<UINT>(window.get_size().y);
+		depthStencilResourceDescriptor.MipLevels = 1;
+		depthStencilResourceDescriptor.ArraySize = 1;
+		depthStencilResourceDescriptor.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		depthStencilResourceDescriptor.SampleDesc.Count = swapChainDescriptor.SampleDesc.Count;
+		depthStencilResourceDescriptor.SampleDesc.Quality = swapChainDescriptor.SampleDesc.Quality;
+		depthStencilResourceDescriptor.Usage = D3D11_USAGE_DEFAULT;
+		depthStencilResourceDescriptor.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+		depthStencilResourceDescriptor.CPUAccessFlags = 0;
+		depthStencilResourceDescriptor.MiscFlags = 0;
+		if (FAILED(_device->CreateTexture2D(&depthStencilResourceDescriptor, nullptr, _depthStencilResource.ReleaseAndGetAddressOf())))
+		{
+			SR_LOG_ERROR("Failed to create Depth-Stencil texture.");
+			return false;
+		}
+		if (FAILED(_device->CreateDepthStencilView(_depthStencilResource.Get(), nullptr, _depthStencilView.ReleaseAndGetAddressOf())))
+		{
+			SR_LOG_ERROR("Failed to create Depth-Stencil view.");
+			return false;
+		}
+
+		{
+			D3D11_RASTERIZER_DESC rasterizerDescriptor{};
+			rasterizerDescriptor.AntialiasedLineEnable = FALSE;
+			rasterizerDescriptor.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
+			rasterizerDescriptor.DepthBias = 0;
+			rasterizerDescriptor.DepthBiasClamp = 0.0f;
+			rasterizerDescriptor.DepthClipEnable = TRUE;
+			rasterizerDescriptor.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
+			rasterizerDescriptor.FrontCounterClockwise = TRUE;
+			rasterizerDescriptor.MultisampleEnable = TRUE;
+			rasterizerDescriptor.ScissorEnable = FALSE;
+			rasterizerDescriptor.SlopeScaledDepthBias = 0.0f;
+			_device->CreateRasterizerState(&rasterizerDescriptor, _defaultRasterizerState.ReleaseAndGetAddressOf());
+			_deviceContext->RSSetState(_defaultRasterizerState.Get());
+		}
+
+		{
+			D3D11_DEPTH_STENCIL_DESC depthStencilDescriptor{};
+			depthStencilDescriptor.DepthEnable = TRUE;
+			depthStencilDescriptor.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS_EQUAL;
+			depthStencilDescriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK::D3D11_DEPTH_WRITE_MASK_ALL;
+			depthStencilDescriptor.StencilEnable = FALSE;
+			if (FAILED(_device->CreateDepthStencilState(&depthStencilDescriptor, _defaultDepthStencilState.ReleaseAndGetAddressOf())))
+			{
+				SR_LOG_ERROR("Failed to create Depth-Stencil state.");
+				return false;
+			}
+		}
+
+		{
+			D3D11_VIEWPORT viewport{};
+			viewport.Width = static_cast<FLOAT>(window.get_size().x);
+			viewport.Height = static_cast<FLOAT>(window.get_size().y);
+			viewport.MinDepth = 0.0f;
+			viewport.MaxDepth = 1.0f;
+			_deviceContext->RSSetViewports(1, &viewport);
+		}
+
+		{
+			D3D11_SAMPLER_DESC samplerDescriptor{};
+			samplerDescriptor.Filter = D3D11_FILTER::D3D11_FILTER_MIN_MAG_MIP_POINT;
+			samplerDescriptor.AddressU = D3D11_TEXTURE_ADDRESS_MODE::D3D11_TEXTURE_ADDRESS_CLAMP;
+			samplerDescriptor.AddressV = D3D11_TEXTURE_ADDRESS_MODE::D3D11_TEXTURE_ADDRESS_CLAMP;
+			samplerDescriptor.AddressW = D3D11_TEXTURE_ADDRESS_MODE::D3D11_TEXTURE_ADDRESS_CLAMP;
+			samplerDescriptor.MipLODBias = 0.0f;
+			samplerDescriptor.ComparisonFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_ALWAYS;
+			samplerDescriptor.MinLOD = 0.0f;
+			samplerDescriptor.MaxLOD = 0.0f;
+			_device->CreateSamplerState(&samplerDescriptor, _defaultSamplerState.ReleaseAndGetAddressOf());
+			_deviceContext->PSSetSamplers(0, 1, _defaultSamplerState.GetAddressOf());
+		}
+
+		{
+			D3D11_BLEND_DESC blendDescriptor{};
+			blendDescriptor.AlphaToCoverageEnable = false;
+			blendDescriptor.RenderTarget[0].BlendEnable = true;
+			blendDescriptor.RenderTarget[0].SrcBlend = D3D11_BLEND::D3D11_BLEND_SRC_ALPHA;
+			blendDescriptor.RenderTarget[0].DestBlend = D3D11_BLEND::D3D11_BLEND_INV_SRC_ALPHA;
+			blendDescriptor.RenderTarget[0].BlendOp = D3D11_BLEND_OP::D3D11_BLEND_OP_ADD;
+			blendDescriptor.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND::D3D11_BLEND_INV_SRC_ALPHA;
+			blendDescriptor.RenderTarget[0].DestBlendAlpha = D3D11_BLEND::D3D11_BLEND_ZERO;
+			blendDescriptor.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP::D3D11_BLEND_OP_ADD;
+			blendDescriptor.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE::D3D11_COLOR_WRITE_ENABLE_ALL;
+			_device->CreateBlendState(&blendDescriptor, _defaultBlendState.ReleaseAndGetAddressOf());
+
+			const float kBlendFactor[4]{ 0, 0, 0, 0 };
+			_deviceContext->OMSetBlendState(_defaultBlendState.Get(), kBlendFactor, 0xFFFFFFFF);
+		}
+
+		_deviceContext->OMSetRenderTargets(1, _backBufferRtv.GetAddressOf(), _depthStencilView.Get());
+		_deviceContext->OMSetDepthStencilState(_defaultDepthStencilState.Get(), 0);
+		return true;
+#endif // defined(SR_DIRECTX)
+		return false;
+	}
+
+	bool RenderDevice::create_ShaderInputLayout(const Shader& vertexShader, ShaderInputLayout& shaderInputLayout)
+	{
+		if (shaderInputLayout._inputElements.empty())
+		{
+			SR_LOG_ERROR("Push input elements before creating ShaderInputLayout!");
+			return false;
+		}
+
+		if (FAILED(_device->CreateInputLayout(&shaderInputLayout._inputElements[0], static_cast<UINT>(shaderInputLayout._inputElements.size()),
+			vertexShader._shaderBlob->GetBufferPointer(), vertexShader._shaderBlob->GetBufferSize(), shaderInputLayout._inputLayout.ReleaseAndGetAddressOf())))
+		{
+			SR_LOG_ERROR("Failed to create ShaderInputLayout");
 			return false;
 		}
 		return true;
 	}
 
-	void App::bind_ShaderInputLayout(ShaderInputLayout& shaderInputLayout)
+	bool RenderDevice::create_Shader(const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet, Shader& shader)
+	{
+		if (sourceCode == nullptr)
+		{
+			SR_LOG_ERROR("Must exist source code!");
+			return false;
+		}
+
+		if (entryPoint == nullptr)
+		{
+			SR_LOG_ERROR("Must specify entry point!");
+			return false;
+		}
+
+		if (target == nullptr)
+		{
+			SR_LOG_ERROR("Must specify target!");
+			return false;
+		}
+
+		const UINT debugFlag = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+		HRESULT result = D3DCompile(sourceCode, ::strlen(sourceCode), shaderIdentifier, nullptr, shaderHeaderSet, entryPoint, target, debugFlag, 0, shader._shaderBlob.ReleaseAndGetAddressOf(), shader._errorMessageBlob.ReleaseAndGetAddressOf());
+		if (FAILED(result))
+		{
+			std::string errorMessages(reinterpret_cast<char*>(shader._errorMessageBlob->GetBufferPointer()));
+			SR_LOG_ERROR("Shader compile failed.");
+			return false;
+		}
+
+		if (shaderType == ShaderType::VertexShader)
+		{
+			if (FAILED(_device->CreateVertexShader(shader._shaderBlob->GetBufferPointer(), shader._shaderBlob->GetBufferSize(), NULL, reinterpret_cast<ID3D11VertexShader**>(shader._shader.ReleaseAndGetAddressOf()))))
+			{
+				return false;
+			}
+		}
+		else if (shaderType == ShaderType::PixelShader)
+		{
+			if (FAILED(_device->CreatePixelShader(shader._shaderBlob->GetBufferPointer(), shader._shaderBlob->GetBufferSize(), NULL, reinterpret_cast<ID3D11PixelShader**>(shader._shader.ReleaseAndGetAddressOf()))))
+			{
+				return false;
+			}
+		}
+		else
+		{
+			return false;
+		}
+
+		shader._type = shaderType;
+		return true;
+	}
+
+	bool RenderDevice::create_texture2D(const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height, Resource& resource)
+	{
+		ComPtr<ID3D11Resource> newResource;
+		D3D11_TEXTURE2D_DESC texture2DDescriptor{};
+		texture2DDescriptor.Width = width;
+		texture2DDescriptor.Height = height;
+		texture2DDescriptor.MipLevels = 1;
+		texture2DDescriptor.ArraySize = 1;
+		texture2DDescriptor.Format = Resource::__convert_to_DXGI_FORMAT(format);
+		texture2DDescriptor.SampleDesc.Count = 1;
+		texture2DDescriptor.Usage = D3D11_USAGE::D3D11_USAGE_DEFAULT;
+		texture2DDescriptor.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
+		texture2DDescriptor.CPUAccessFlags = 0;
+		const uint32 elementStride = Resource::__compute_element_stride(format);
+		D3D11_SUBRESOURCE_DATA subResource{};
+		subResource.pSysMem = resourceContent;
+		subResource.SysMemPitch = texture2DDescriptor.Width * elementStride;
+		subResource.SysMemSlicePitch = 0;
+		if (SUCCEEDED(_device->CreateTexture2D(&texture2DDescriptor, &subResource, reinterpret_cast<ID3D11Texture2D**>(newResource.ReleaseAndGetAddressOf()))))
+		{
+			D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDescriptor{};
+			shaderResourceViewDescriptor.Format = texture2DDescriptor.Format;
+			shaderResourceViewDescriptor.ViewDimension = D3D11_SRV_DIMENSION::D3D11_SRV_DIMENSION_TEXTURE2D;
+			shaderResourceViewDescriptor.Texture2D.MipLevels = texture2DDescriptor.MipLevels;
+			shaderResourceViewDescriptor.Texture2D.MostDetailedMip = 0;
+			if (SUCCEEDED(_device->CreateShaderResourceView(newResource.Get(), &shaderResourceViewDescriptor, reinterpret_cast<ID3D11ShaderResourceView**>(resource._view.ReleaseAndGetAddressOf()))))
+			{
+				resource._type = ResourceType::Teture2D;
+				resource._format = format;
+
+				resource._elementStride = elementStride;
+				resource._elementMaxCount = texture2DDescriptor.Width * texture2DDescriptor.Height;
+
+				resource._width = width;
+
+				std::swap(resource._resource, newResource);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool RenderDevice::create_buffer(const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount, Resource& resource)
+	{
+		if (type == ResourceType::Teture2D)
+		{
+			SR_ASSERT(false, "Use create_texture2D() instead!");
+			return false;
+		}
+
+		ComPtr<ID3D11Resource> newResource;
+		D3D11_BUFFER_DESC bufferDescriptor{};
+		bufferDescriptor.Usage = D3D11_USAGE::D3D11_USAGE_DYNAMIC;
+		bufferDescriptor.ByteWidth = elementStride * elementCount;
+		bufferDescriptor.BindFlags = D3D11_BIND_FLAG(1 << (uint32)type); // !!! CAUTION !!!
+		bufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::D3D11_CPU_ACCESS_WRITE;
+		bufferDescriptor.MiscFlags = 0;
+		bufferDescriptor.StructureByteStride = 0;
+		D3D11_SUBRESOURCE_DATA subresourceData{};
+		subresourceData.pSysMem = content;
+		if (SUCCEEDED(_device->CreateBuffer(&bufferDescriptor, (content != nullptr) ? &subresourceData : nullptr, reinterpret_cast<ID3D11Buffer**>(newResource.ReleaseAndGetAddressOf()))))
+		{
+			resource._type = type;
+			resource._byteSize = bufferDescriptor.ByteWidth;
+			resource._elementStride = elementStride;
+			resource._elementMaxCount = elementCount;
+
+			std::swap(resource._resource, newResource);
+			return true;
+		}
+		return false;
+	}
+
+	bool RenderDevice::update_resource(const void* const content, const uint32 elementStride, const uint32 elementCount, Resource& resource)
+	{
+		if (elementCount > resource._elementMaxCount)
+		{
+			return create_buffer(resource._type, content, elementStride, elementCount, resource);
+		}
+
+		class SafeResourceMapper
+		{
+		public:
+			SafeResourceMapper(RenderDevice& renderDevice, ID3D11Resource* const resource, const uint32 subresource)
+				: _renderDevice{ renderDevice }
+				, _resource{ resource }
+				, _subresource{ subresource }
+				, _mappedSubresource{}
+			{
+				if (FAILED(_renderDevice._deviceContext->Map(_resource, _subresource, D3D11_MAP::D3D11_MAP_WRITE_DISCARD, 0, &_mappedSubresource)))
+				{
+					_mappedSubresource.pData = nullptr;
+					_mappedSubresource.DepthPitch = 0;
+					_mappedSubresource.RowPitch = 0;
+				}
+			}
+			~SafeResourceMapper()
+			{
+				if (isValid() == true)
+				{
+					_renderDevice._deviceContext->Unmap(_resource, _subresource);
+				}
+			}
+			bool isValid() const noexcept
+			{
+				return _mappedSubresource.pData != nullptr;
+			}
+			void set(const void* const data, const uint32 size) noexcept
+			{
+				::memcpy(_mappedSubresource.pData, data, size);
+			}
+
+		private:
+			RenderDevice& _renderDevice;
+			ID3D11Resource* const _resource;
+			const uint32 _subresource;
+			D3D11_MAPPED_SUBRESOURCE _mappedSubresource;
+		};
+
+		SafeResourceMapper safeResourceMapper(*this, resource._resource.Get(), 0);
+		if (safeResourceMapper.isValid())
+		{
+			safeResourceMapper.set(content, elementStride * elementCount);
+			return true;
+		}
+		return false;
+	}
+
+	void RenderDevice::bind_ShaderInputLayout(ShaderInputLayout& shaderInputLayout)
 	{
 		_is_InputLayout_bound = true;
 
@@ -1493,7 +1671,7 @@ namespace SimpleRenderer
 			_deviceContext->IASetInputLayout(shaderInputLayout._inputLayout.Get());
 	}
 
-	void App::bind_Shader(Shader& shader)
+	void RenderDevice::bind_Shader(Shader& shader)
 	{
 		if (shader._type == ShaderType::VertexShader)
 		{
@@ -1507,7 +1685,7 @@ namespace SimpleRenderer
 		}
 	}
 
-	void App::bind_input(Resource& resource, const uint32 slot)
+	void RenderDevice::bind_input(Resource& resource, const uint32 slot)
 	{
 		if (resource._type == ResourceType::VertexBuffer)
 		{
@@ -1530,7 +1708,7 @@ namespace SimpleRenderer
 		}
 	}
 
-	void App::bind_ShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot)
+	void RenderDevice::bind_ShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot)
 	{
 		if (resource._type == ResourceType::ConstantBuffer)
 		{
@@ -1570,19 +1748,19 @@ namespace SimpleRenderer
 		}
 	}
 
-	void App::use_triangle_primitive()
+	void RenderDevice::use_triangle_primitive()
 	{
 		_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	}
 
-	void App::begin_rendering()
+	void RenderDevice::begin_rendering(const Color& clearColor)
 	{
-		_deviceContext->ClearRenderTargetView(_backBufferRtv.Get(), _clearColor.f);
+		_deviceContext->ClearRenderTargetView(_backBufferRtv.Get(), clearColor.f);
 		_deviceContext->ClearDepthStencilView(_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 		use_triangle_primitive();
 	}
 
-	void App::draw_indexed(const uint32 indexCount)
+	void RenderDevice::draw_indexed(const uint32 indexCount)
 	{
 		if (_is_InputLayout_bound == false)
 		{
@@ -1606,6 +1784,41 @@ namespace SimpleRenderer
 		}
 
 		_deviceContext->DrawIndexed(indexCount, 0, 0);
+	}
+
+	void RenderDevice::draw(const uint32 vertexCount)
+	{
+		if (_is_VertexBuffer_bound == false)
+		{
+			SR_LOG_ERROR("You must bind VertexBuffer first!");
+			return;
+		}
+
+		_deviceContext->Draw(vertexCount, 0);
+	}
+
+	void RenderDevice::end_rendering()
+	{
+		_swapChain->Present(0, 0);
+	}
+
+	bool App::is_running()
+	{
+		if (_window.processMessages() < 0)
+		{
+			return false;
+		}
+		return true;
+	}
+
+	void App::begin_rendering()
+	{
+		_renderDevice.begin_rendering(_clearColor);
+	}
+
+	void App::draw_indexed(const uint32 indexCount)
+	{
+		_renderDevice.draw_indexed(indexCount);
 	}
 
 	void App::draw_text(const Color& color, const std::string& text, const float2& position)
@@ -1638,21 +1851,15 @@ namespace SimpleRenderer
 
 	void App::draw(const uint32 vertexCount)
 	{
-		if (_is_VertexBuffer_bound == false)
-		{
-			SR_LOG_ERROR("You must bind VertexBuffer first!");
-			return;
-		}
-
-		_deviceContext->Draw(vertexCount, 0);
+		_renderDevice.draw(vertexCount);
 	}
 
 	void App::end_rendering()
 	{
 		if (_defaultFontVertices.empty() == false)
 		{
-			_defaultFontVertexBuffer.update(*this, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
-			_defaultFontIndexBuffer.update(*this, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
+			_defaultFontVertexBuffer.update_resource(_renderDevice, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
+			_defaultFontIndexBuffer.update_resource(_renderDevice, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
 
 			bind_default_FontData();
 
@@ -1661,140 +1868,7 @@ namespace SimpleRenderer
 			_defaultFontIndices.clear();
 		}
 
-		_swapChain->Present(0, 0);
-	}
-
-	void App::create_device()
-	{
-#if defined(SR_DIRECTX)
-		DXGI_SWAP_CHAIN_DESC swapChainDescriptor{};
-		swapChainDescriptor.BufferCount = 1;
-		swapChainDescriptor.BufferDesc.Format = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
-		swapChainDescriptor.BufferDesc.Width = static_cast<UINT>(_window.get_size().x);
-		swapChainDescriptor.BufferDesc.Height = static_cast<UINT>(_window.get_size().y);
-		swapChainDescriptor.BufferDesc.RefreshRate.Denominator = 1;
-		swapChainDescriptor.BufferDesc.RefreshRate.Numerator = 60;
-		swapChainDescriptor.BufferDesc.Scaling = DXGI_MODE_SCALING::DXGI_MODE_SCALING_UNSPECIFIED;
-		swapChainDescriptor.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER::DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-		swapChainDescriptor.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		swapChainDescriptor.Flags = 0;
-		swapChainDescriptor.OutputWindow = reinterpret_cast<HWND>(_window.get_window_handle());
-		swapChainDescriptor.SampleDesc.Count = 1;
-		swapChainDescriptor.SampleDesc.Quality = 0;
-		swapChainDescriptor.SwapEffect = DXGI_SWAP_EFFECT::DXGI_SWAP_EFFECT_DISCARD;
-		swapChainDescriptor.Windowed = TRUE;
-		if (FAILED(::D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE::D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION,
-			&swapChainDescriptor, _swapChain.ReleaseAndGetAddressOf(), _device.ReleaseAndGetAddressOf(), nullptr, _deviceContext.ReleaseAndGetAddressOf())))
-		{
-			SR_LOG_ERROR("Failed to create Device and SwapChain.");
-			return;
-		}
-
-		ComPtr<ID3D11Texture2D> backBuffer;
-		_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.ReleaseAndGetAddressOf()));
-		if (FAILED(_device->CreateRenderTargetView(backBuffer.Get(), nullptr, _backBufferRtv.ReleaseAndGetAddressOf())))
-		{
-			SR_LOG_ERROR("Failed to get BackBuffer.");
-			return;
-		}
-
-		D3D11_TEXTURE2D_DESC depthStencilResourceDescriptor{};
-		depthStencilResourceDescriptor.Width = static_cast<UINT>(_window.get_size().x);
-		depthStencilResourceDescriptor.Height = static_cast<UINT>(_window.get_size().y);
-		depthStencilResourceDescriptor.MipLevels = 1;
-		depthStencilResourceDescriptor.ArraySize = 1;
-		depthStencilResourceDescriptor.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		depthStencilResourceDescriptor.SampleDesc.Count = swapChainDescriptor.SampleDesc.Count;
-		depthStencilResourceDescriptor.SampleDesc.Quality = swapChainDescriptor.SampleDesc.Quality;
-		depthStencilResourceDescriptor.Usage = D3D11_USAGE_DEFAULT;
-		depthStencilResourceDescriptor.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-		depthStencilResourceDescriptor.CPUAccessFlags = 0;
-		depthStencilResourceDescriptor.MiscFlags = 0;
-		if (FAILED(_device->CreateTexture2D(&depthStencilResourceDescriptor, nullptr, _depthStencilResource.ReleaseAndGetAddressOf())))
-		{
-			SR_LOG_ERROR("Failed to create Depth-Stencil texture.");
-			return;
-		}
-		if (FAILED(_device->CreateDepthStencilView(_depthStencilResource.Get(), nullptr, _depthStencilView.ReleaseAndGetAddressOf())))
-		{
-			SR_LOG_ERROR("Failed to create Depth-Stencil view.");
-			return;
-		}
-
-		{
-			D3D11_RASTERIZER_DESC rasterizerDescriptor{};
-			rasterizerDescriptor.AntialiasedLineEnable = FALSE;
-			rasterizerDescriptor.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
-			rasterizerDescriptor.DepthBias = 0;
-			rasterizerDescriptor.DepthBiasClamp = 0.0f;
-			rasterizerDescriptor.DepthClipEnable = TRUE;
-			rasterizerDescriptor.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-			rasterizerDescriptor.FrontCounterClockwise = TRUE;
-			rasterizerDescriptor.MultisampleEnable = TRUE;
-			rasterizerDescriptor.ScissorEnable = FALSE;
-			rasterizerDescriptor.SlopeScaledDepthBias = 0.0f;
-			_device->CreateRasterizerState(&rasterizerDescriptor, _defaultRasterizerState.ReleaseAndGetAddressOf());
-			_deviceContext->RSSetState(_defaultRasterizerState.Get());
-		}
-
-		{
-			D3D11_DEPTH_STENCIL_DESC depthStencilDescriptor{};
-			depthStencilDescriptor.DepthEnable = TRUE;
-			depthStencilDescriptor.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS_EQUAL;
-			depthStencilDescriptor.DepthWriteMask = D3D11_DEPTH_WRITE_MASK::D3D11_DEPTH_WRITE_MASK_ALL;
-			depthStencilDescriptor.StencilEnable = FALSE;
-			if (FAILED(_device->CreateDepthStencilState(&depthStencilDescriptor, _defaultDepthStencilState.ReleaseAndGetAddressOf())))
-			{
-				SR_LOG_ERROR("Failed to create Depth-Stencil state.");
-				return;
-			}
-		}
-
-		{
-			D3D11_VIEWPORT viewport{};
-			viewport.Width = static_cast<FLOAT>(_window.get_size().x);
-			viewport.Height = static_cast<FLOAT>(_window.get_size().y);
-			viewport.MinDepth = 0.0f;
-			viewport.MaxDepth = 1.0f;
-			_deviceContext->RSSetViewports(1, &viewport);
-		}
-
-		{
-			D3D11_SAMPLER_DESC samplerDescriptor{};
-			samplerDescriptor.Filter = D3D11_FILTER::D3D11_FILTER_MIN_MAG_MIP_POINT;
-			samplerDescriptor.AddressU = D3D11_TEXTURE_ADDRESS_MODE::D3D11_TEXTURE_ADDRESS_CLAMP;
-			samplerDescriptor.AddressV = D3D11_TEXTURE_ADDRESS_MODE::D3D11_TEXTURE_ADDRESS_CLAMP;
-			samplerDescriptor.AddressW = D3D11_TEXTURE_ADDRESS_MODE::D3D11_TEXTURE_ADDRESS_CLAMP;
-			samplerDescriptor.MipLODBias = 0.0f;
-			samplerDescriptor.ComparisonFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_ALWAYS;
-			samplerDescriptor.MinLOD = 0.0f;
-			samplerDescriptor.MaxLOD = 0.0f;
-			_device->CreateSamplerState(&samplerDescriptor, _defaultSamplerState.ReleaseAndGetAddressOf());
-			_deviceContext->PSSetSamplers(0, 1, _defaultSamplerState.GetAddressOf());
-		}
-
-		{
-			D3D11_BLEND_DESC blendDescriptor{};
-			blendDescriptor.AlphaToCoverageEnable = false;
-			blendDescriptor.RenderTarget[0].BlendEnable = true;
-			blendDescriptor.RenderTarget[0].SrcBlend = D3D11_BLEND::D3D11_BLEND_SRC_ALPHA;
-			blendDescriptor.RenderTarget[0].DestBlend = D3D11_BLEND::D3D11_BLEND_INV_SRC_ALPHA;
-			blendDescriptor.RenderTarget[0].BlendOp = D3D11_BLEND_OP::D3D11_BLEND_OP_ADD;
-			blendDescriptor.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND::D3D11_BLEND_INV_SRC_ALPHA;
-			blendDescriptor.RenderTarget[0].DestBlendAlpha = D3D11_BLEND::D3D11_BLEND_ZERO;
-			blendDescriptor.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP::D3D11_BLEND_OP_ADD;
-			blendDescriptor.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE::D3D11_COLOR_WRITE_ENABLE_ALL;
-			_device->CreateBlendState(&blendDescriptor, _defaultBlendState.ReleaseAndGetAddressOf());
-
-			const float kBlendFactor[4]{ 0, 0, 0, 0 };
-			_deviceContext->OMSetBlendState(_defaultBlendState.Get(), kBlendFactor, 0xFFFFFFFF);
-		}
-
-		_deviceContext->OMSetRenderTargets(1, _backBufferRtv.GetAddressOf(), _depthStencilView.Get());
-		_deviceContext->OMSetDepthStencilState(_defaultDepthStencilState.Get(), 0);
-#endif // defined(SR_DIRECTX)
-
-		create_default_FontData();
+		_renderDevice.end_rendering();
 	}
 
 	void App::create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow])
@@ -1817,19 +1891,19 @@ namespace SimpleRenderer
 
 		_defaultFontShaderHeaderSet.push_shader_header("DefaultFontShaderHeader", kDefaultFontShaderHeaderCode);
 
-		_defaultFontVertexShader.create(app, kDefaultFontVertexShaderCode, ShaderType::VertexShader, "DefaultFontVertexShader", "main", "vs_5_0", &_defaultFontShaderHeaderSet);
+		_defaultFontVertexShader.create_Shader(_renderDevice, kDefaultFontVertexShaderCode, ShaderType::VertexShader, "DefaultFontVertexShader", "main", "vs_5_0", &_defaultFontShaderHeaderSet);
 
 		_defaultFontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("POSITION", 0));
 		_defaultFontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("COLOR", 0));
 		_defaultFontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float2("TEXCOORD", 0));
-		_defaultFontShaderInputLayout.create(app, _defaultFontVertexShader);
+		_defaultFontShaderInputLayout.create_InputLayout(_renderDevice, _defaultFontVertexShader);
 
-		_defaultFontPixelShader.create(app, kDefaultFontPixelShaderCode, ShaderType::PixelShader, "DefaultFontPixelShader", "main", "ps_5_0", &_defaultFontShaderHeaderSet);
+		_defaultFontPixelShader.create_Shader(_renderDevice, kDefaultFontPixelShaderCode, ShaderType::PixelShader, "DefaultFontPixelShader", "main", "ps_5_0", &_defaultFontShaderHeaderSet);
 
 		const uint2& screenSize = _window.get_size();
 		DEFAULT_FONT_CB_MATRICES default_font_cb_matrices;
 		default_font_cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(screenSize);
-		_defaultFontCBMatrices.create_buffer(app, ResourceType::ConstantBuffer, &default_font_cb_matrices, sizeof(default_font_cb_matrices), 1);
+		_defaultFontCBMatrices.create_buffer(_renderDevice, ResourceType::ConstantBuffer, &default_font_cb_matrices, sizeof(default_font_cb_matrices), 1);
 
 		byte bytes[kFontTextureByteCount]{};
 		for (uint32 iter = 0; iter < kFontTextureByteCount; ++iter)
@@ -1839,15 +1913,15 @@ namespace SimpleRenderer
 			const byte byte_ = (kFontTextureRawBitData[byteAt] >> (7 - bitAt)) & 1;
 			bytes[iter] = byte_ * 255;
 		}
-		_defaultFontTexture.create_texture2D(app, TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight);
+		_defaultFontTexture.create_texture2D(app.get_RenderDevice(), TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight);
 
 		MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(Color(), float2(512, 480), float2(256, 240), 0.0f, _defaultFontVertices, _defaultFontIndices);
 		_defaultFontVertices[0]._texcoord = float2(0, 0);
 		_defaultFontVertices[1]._texcoord = float2(1, 0);
 		_defaultFontVertices[2]._texcoord = float2(0, 1);
 		_defaultFontVertices[3]._texcoord = float2(1, 1);
-		_defaultFontVertexBuffer.create_buffer(app, ResourceType::VertexBuffer, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
-		_defaultFontIndexBuffer.create_buffer(app, ResourceType::IndexBuffer, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
+		_defaultFontVertexBuffer.create_buffer(app.get_RenderDevice(), ResourceType::VertexBuffer, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
+		_defaultFontIndexBuffer.create_buffer(app.get_RenderDevice(), ResourceType::IndexBuffer, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
 
 		byte row0[kFontTextureGlyphCountInRow]{ ' ','!','\"','$','#','%','&','\'','(',')','*','+',',','-','.','/' };
 		create_default_FontData_push_glyphRow(0, row0);
@@ -1870,14 +1944,13 @@ namespace SimpleRenderer
 
 	void App::bind_default_FontData()
 	{
-		bind_Shader(_defaultFontVertexShader);
-		bind_Shader(_defaultFontPixelShader);
-		bind_ShaderInputLayout(_defaultFontShaderInputLayout);
-		bind_ShaderResource(ShaderType::VertexShader, _defaultFontCBMatrices, 0);
-		bind_ShaderResource(ShaderType::PixelShader, _defaultFontTexture, 0);
-
-		bind_input(_defaultFontVertexBuffer, 0);
-		bind_input(_defaultFontIndexBuffer, 0);
+		_renderDevice.bind_Shader(_defaultFontVertexShader);
+		_renderDevice.bind_Shader(_defaultFontPixelShader);
+		_renderDevice.bind_ShaderInputLayout(_defaultFontShaderInputLayout);
+		_renderDevice.bind_ShaderResource(ShaderType::VertexShader, _defaultFontCBMatrices, 0);
+		_renderDevice.bind_ShaderResource(ShaderType::PixelShader, _defaultFontTexture, 0);
+		_renderDevice.bind_input(_defaultFontVertexBuffer, 0);
+		_renderDevice.bind_input(_defaultFontIndexBuffer, 0);
 	}
 
 	bool read_file(const std::string& file_name, std::string& out_content)
@@ -2201,18 +2274,18 @@ namespace SimpleRenderer
 		ShaderHeaderSet shaderHeaderSet;
 		shaderHeaderSet.push_shader_header("StreamData", kSampleShaderHeaderCode_StreamData);
 		Shader vertexShader;
-		vertexShader.create(app, kSampleVertexShaderCode, ShaderType::VertexShader, "SampleVertexShader", "main", "vs_5_0", &shaderHeaderSet);
+		vertexShader.create_Shader(app.get_RenderDevice(), kSampleVertexShaderCode, ShaderType::VertexShader, "SampleVertexShader", "main", "vs_5_0", &shaderHeaderSet);
 		ShaderInputLayout shaderInputLayout;
 		shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("POSITION", 0));
 		shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("COLOR", 0));
 		shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float2("TEXCOORD", 0));
-		shaderInputLayout.create(app, vertexShader);
+		shaderInputLayout.create_InputLayout(app.get_RenderDevice(), vertexShader);
 		Shader pixelShader;
-		pixelShader.create(app, kSamplePixelShaderCode, ShaderType::PixelShader, "SamplePixelShader", "main", "ps_5_0", &shaderHeaderSet);
+		pixelShader.create_Shader(app.get_RenderDevice(), kSamplePixelShaderCode, ShaderType::PixelShader, "SamplePixelShader", "main", "ps_5_0", &shaderHeaderSet);
 		Resource vscbMatrices;
 		SAMPLE_CB_MATRICES cb_matrices;
 		cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(kScreenSize);
-		vscbMatrices.create_buffer(app, ResourceType::ConstantBuffer, &cb_matrices, sizeof(SAMPLE_CB_MATRICES), 1);
+		vscbMatrices.create_buffer(app.get_RenderDevice(), ResourceType::ConstantBuffer, &cb_matrices, sizeof(SAMPLE_CB_MATRICES), 1);
 
 		std::vector<SAMPLE_VS_INPUT> vertices;
 		std::vector<uint32> indices;
@@ -2229,17 +2302,17 @@ namespace SimpleRenderer
 				indices.clear();
 
 				MeshGenerator<SAMPLE_VS_INPUT>::push_2D_circle(Color(1, 1, 0, 1), float2(100, 100), 32.0f, 16, vertices, indices);
-				app.bind_ShaderInputLayout(shaderInputLayout);
-				app.bind_Shader(vertexShader);
-				app.bind_Shader(pixelShader);
-				app.bind_ShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
-				app.bind_input(vertexBuffer, 0);
-				app.bind_input(indexBuffer, 0);
+				app.get_RenderDevice().bind_ShaderInputLayout(shaderInputLayout);
+				app.get_RenderDevice().bind_Shader(vertexShader);
+				app.get_RenderDevice().bind_Shader(pixelShader);
+				app.get_RenderDevice().bind_ShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
+				app.get_RenderDevice().bind_input(vertexBuffer, 0);
+				app.get_RenderDevice().bind_input(indexBuffer, 0);
 				if (vertices.empty() == false)
 				{
-					vertexBuffer.update(app, &vertices[0], sizeof(SAMPLE_VS_INPUT), (uint32)vertices.size());
-					indexBuffer.update(app, &indices[0], sizeof(uint32), (uint32)indices.size());
-					app.draw_indexed((uint32)indices.size());
+					vertexBuffer.update_resource(app.get_RenderDevice(), &vertices[0], sizeof(SAMPLE_VS_INPUT), (uint32)vertices.size());
+					indexBuffer.update_resource(app.get_RenderDevice(), &indices[0], sizeof(uint32), (uint32)indices.size());
+					app.get_RenderDevice().draw_indexed((uint32)indices.size());
 				}
 				app.draw_text(Color(1, 1, 1, 1), "Sample Window", float2(10, 10));
 			}
