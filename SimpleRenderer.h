@@ -538,21 +538,21 @@ namespace SimpleRenderer
 		Teture2D,
 	};
 
-	struct alignas(float) DEFAULT_FONT_VS_INPUT
+	struct alignas(float) FONT_VS_INPUT
 	{
 		float4 _position;
 		float4 _color;
 		float2 _texcoord;
 	};
 
-	struct DEFAULT_FONT_CB_MATRICES
+	struct FONT_CB_MATRICES
 	{
 		float4x4 _projectionMatrix;
 	};
 
-	const char kDefaultFontShaderHeaderCode[] =
+	const char kFontShaderHeaderCode[] =
 		R"(
-        struct DEFAULT_FONT_VS_INPUT
+        struct FONT_VS_INPUT
         {
             float4 position : POSITION0;
             float4 color : COLOR0;
@@ -566,16 +566,16 @@ namespace SimpleRenderer
         };
     )";
 
-	const char kDefaultFontVertexShaderCode[] =
+	const char kFontVertexShaderCode[] =
 		R"(
-        #include "DefaultFontShaderHeader"
+        #include "FontShaderHeader"
     
         cbuffer DEFAULT_CB_MATRICES
         {
             float4x4 g_cbProjectionMatrix;
         };
     
-        VS_OUTPUT main(DEFAULT_FONT_VS_INPUT input)
+        VS_OUTPUT main(FONT_VS_INPUT input)
         {
             VS_OUTPUT output;
             output.screenPosition = mul(input.position, g_cbProjectionMatrix);
@@ -586,9 +586,9 @@ namespace SimpleRenderer
         }
     )";
 
-	const char kDefaultFontPixelShaderCode[] =
+	const char kFontPixelShaderCode[] =
 		R"(
-        #include "DefaultFontShaderHeader"
+        #include "FontShaderHeader"
     
         sampler g_sampler0;
         Texture2D<float4> g_texture0;
@@ -601,10 +601,10 @@ namespace SimpleRenderer
         }
     )";
 
-	struct DefaultFontGlyphMeta
+	struct FontGlyphMeta
 	{
-		DefaultFontGlyphMeta() :DefaultFontGlyphMeta(0, 0, 0, 1, 1) { __noop; }
-		DefaultFontGlyphMeta(byte ch, float u0, float v0, float u1, float v1) : _ch{ ch }, _u0{ u0 }, _v0{ v0 }, _u1{ u1 }, _v1{ v1 } { __noop; }
+		FontGlyphMeta() :FontGlyphMeta(0, 0, 0, 1, 1) { __noop; }
+		FontGlyphMeta(byte ch, float u0, float v0, float u1, float v1) : _ch{ ch }, _u0{ u0 }, _v0{ v0 }, _u1{ u1 }, _v1{ v1 } { __noop; }
 
 		byte _ch;
 		float _u0;
@@ -613,14 +613,14 @@ namespace SimpleRenderer
 		float _v1;
 	};
 
-	class DefaultFontData
+	class FontData
 	{
 	public:
-		void push_glyph(const DefaultFontGlyphMeta& glyphMeta);
-		const DefaultFontGlyphMeta& get_GlyphMeta(const byte& ch) const;
+		void push_glyph(const FontGlyphMeta& glyphMeta);
+		const FontGlyphMeta& get_GlyphMeta(const byte& ch) const;
 
 	private:
-		std::vector<DefaultFontGlyphMeta> _glyphMetas;
+		std::vector<FontGlyphMeta> _glyphMetas;
 		std::unordered_map<byte, uint64> _glyphMap;
 	};
 
@@ -1088,23 +1088,23 @@ namespace SimpleRenderer
 		RenderDevice _renderDevice;
 	
 	private:
-		ShaderHeaderSet _defaultFontShaderHeaderSet;
-		Shader _defaultFontVertexShader;
-		ShaderInputLayout _defaultFontShaderInputLayout;
-		Shader _defaultFontPixelShader;
-		Resource _defaultFontCBMatrices;
-		Resource _defaultFontTexture;
-		Resource _defaultFontVertexBuffer;
-		Resource _defaultFontIndexBuffer;
-		DefaultFontData _defaultFontData;
-		std::vector<DEFAULT_FONT_VS_INPUT> _defaultFontVertices;
-		std::vector<uint32> _defaultFontIndices;
-		float2 _defaultFontScale = float2(1.25f, 2.25f);
+		ShaderHeaderSet _fontShaderHeaderSet;
+		Shader _fontVertexShader;
+		ShaderInputLayout _fontShaderInputLayout;
+		Shader _fontPixelShader;
+		Resource _fontCBMatrices;
+		Resource _fontTexture;
+		Resource _fontVertexBuffer;
+		Resource _fontIndexBuffer;
+		std::vector<FONT_VS_INPUT> _fontVertices;
+		std::vector<uint32> _fontIndices;
+		float2 _fontScale = float2(1.25f, 2.25f);
+		FontData _defaultFontData;
 	};
 
 
 #pragma region Function Definitions
-	void DefaultFontData::push_glyph(const DefaultFontGlyphMeta& glyphMeta)
+	void FontData::push_glyph(const FontGlyphMeta& glyphMeta)
 	{
 		auto found = _glyphMap.find(glyphMeta._ch);
 		if (found != _glyphMap.end())
@@ -1116,7 +1116,7 @@ namespace SimpleRenderer
 		_glyphMap.insert(std::pair<byte, uint64>(glyphMeta._ch, _glyphMetas.size() - 1));
 	}
 
-	const DefaultFontGlyphMeta& DefaultFontData::get_GlyphMeta(const byte& ch) const
+	const FontGlyphMeta& FontData::get_GlyphMeta(const byte& ch) const
 	{
 		auto found = _glyphMap.find(ch);
 		if (found == _glyphMap.end())
@@ -1828,23 +1828,23 @@ namespace SimpleRenderer
 			return;
 		}
 
-		const float unit_x = _defaultFontScale.x * kFontTextureGlyphWidth;
-		const float unit_y = _defaultFontScale.y * kFontTextureGlyphHeight;
+		const float unit_x = _fontScale.x * kFontTextureGlyphWidth;
+		const float unit_y = _fontScale.y * kFontTextureGlyphHeight;
 		const float2 sizeUnit = float2(unit_x, unit_y);
 		const float2 positionUnit = float2(unit_x, 0);
 		uint32 chCount = 0;
 		for (const char& ch : text)
 		{
-			const DefaultFontGlyphMeta& glyphMeta = _defaultFontData.get_GlyphMeta(ch);
+			const FontGlyphMeta& glyphMeta = _defaultFontData.get_GlyphMeta(ch);
 			const float u0 = glyphMeta._u0;
 			const float u1 = glyphMeta._u1;
 			const float v0 = glyphMeta._v0;
 			const float v1 = glyphMeta._v1;
-			MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(color, sizeUnit, position + sizeUnit * 0.5f + positionUnit * (float)chCount, 0.0f, _defaultFontVertices, _defaultFontIndices);
-			_defaultFontVertices[_defaultFontVertices.size() - 4]._texcoord = float2(u0, v0);
-			_defaultFontVertices[_defaultFontVertices.size() - 3]._texcoord = float2(u0, v1);
-			_defaultFontVertices[_defaultFontVertices.size() - 2]._texcoord = float2(u1, v1);
-			_defaultFontVertices[_defaultFontVertices.size() - 1]._texcoord = float2(u1, v0);
+			MeshGenerator<FONT_VS_INPUT>::push_2D_rectangle(color, sizeUnit, position + sizeUnit * 0.5f + positionUnit * (float)chCount, 0.0f, _fontVertices, _fontIndices);
+			_fontVertices[_fontVertices.size() - 4]._texcoord = float2(u0, v0);
+			_fontVertices[_fontVertices.size() - 3]._texcoord = float2(u0, v1);
+			_fontVertices[_fontVertices.size() - 2]._texcoord = float2(u1, v1);
+			_fontVertices[_fontVertices.size() - 1]._texcoord = float2(u1, v0);
 			++chCount;
 		}
 	}
@@ -1856,16 +1856,16 @@ namespace SimpleRenderer
 
 	void App::end_rendering()
 	{
-		if (_defaultFontVertices.empty() == false)
+		if (_fontVertices.empty() == false)
 		{
-			_defaultFontVertexBuffer.update_resource(_renderDevice, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
-			_defaultFontIndexBuffer.update_resource(_renderDevice, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
+			_fontVertexBuffer.update_resource(_renderDevice, &_fontVertices[0], sizeof(FONT_VS_INPUT), (uint32)_fontVertices.size());
+			_fontIndexBuffer.update_resource(_renderDevice, &_fontIndices[0], sizeof(uint32), (uint32)_fontIndices.size());
 
 			bind_default_FontData();
 
-			draw_indexed((uint32)_defaultFontIndices.size());
-			_defaultFontVertices.clear();
-			_defaultFontIndices.clear();
+			draw_indexed((uint32)_fontIndices.size());
+			_fontVertices.clear();
+			_fontIndices.clear();
 		}
 
 		_renderDevice.end_rendering();
@@ -1881,7 +1881,7 @@ namespace SimpleRenderer
 		const float v1 = v0 + glyphTextureUnit_V;
 		for (uint32 iter = 0; iter < kFontTextureGlyphCountInRow; ++iter)
 		{
-			_defaultFontData.push_glyph(DefaultFontGlyphMeta(ch[iter], glyphTextureUnit_U * iter, v0, glyphTextureUnit_U * (iter + 1), v1));
+			_defaultFontData.push_glyph(FontGlyphMeta(ch[iter], glyphTextureUnit_U * iter, v0, glyphTextureUnit_U * (iter + 1), v1));
 		}
 	}
 
@@ -1889,21 +1889,21 @@ namespace SimpleRenderer
 	{
 		App& app = *this;
 
-		_defaultFontShaderHeaderSet.push_shader_header("DefaultFontShaderHeader", kDefaultFontShaderHeaderCode);
+		_fontShaderHeaderSet.push_shader_header("FontShaderHeader", kFontShaderHeaderCode);
 
-		_defaultFontVertexShader.create_Shader(_renderDevice, kDefaultFontVertexShaderCode, ShaderType::VertexShader, "DefaultFontVertexShader", "main", "vs_5_0", &_defaultFontShaderHeaderSet);
+		_fontVertexShader.create_Shader(_renderDevice, kFontVertexShaderCode, ShaderType::VertexShader, "FontVertexShader", "main", "vs_5_0", &_fontShaderHeaderSet);
 
-		_defaultFontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("POSITION", 0));
-		_defaultFontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("COLOR", 0));
-		_defaultFontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float2("TEXCOORD", 0));
-		_defaultFontShaderInputLayout.create_InputLayout(_renderDevice, _defaultFontVertexShader);
+		_fontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("POSITION", 0));
+		_fontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("COLOR", 0));
+		_fontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float2("TEXCOORD", 0));
+		_fontShaderInputLayout.create_InputLayout(_renderDevice, _fontVertexShader);
 
-		_defaultFontPixelShader.create_Shader(_renderDevice, kDefaultFontPixelShaderCode, ShaderType::PixelShader, "DefaultFontPixelShader", "main", "ps_5_0", &_defaultFontShaderHeaderSet);
+		_fontPixelShader.create_Shader(_renderDevice, kFontPixelShaderCode, ShaderType::PixelShader, "FontPixelShader", "main", "ps_5_0", &_fontShaderHeaderSet);
 
 		const uint2& screenSize = _window.get_size();
-		DEFAULT_FONT_CB_MATRICES default_font_cb_matrices;
-		default_font_cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(screenSize);
-		_defaultFontCBMatrices.create_buffer(_renderDevice, ResourceType::ConstantBuffer, &default_font_cb_matrices, sizeof(default_font_cb_matrices), 1);
+		FONT_CB_MATRICES font_cb_matrices;
+		font_cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(screenSize);
+		_fontCBMatrices.create_buffer(_renderDevice, ResourceType::ConstantBuffer, &font_cb_matrices, sizeof(font_cb_matrices), 1);
 
 		byte bytes[kFontTextureByteCount]{};
 		for (uint32 iter = 0; iter < kFontTextureByteCount; ++iter)
@@ -1913,15 +1913,15 @@ namespace SimpleRenderer
 			const byte byte_ = (kFontTextureRawBitData[byteAt] >> (7 - bitAt)) & 1;
 			bytes[iter] = byte_ * 255;
 		}
-		_defaultFontTexture.create_texture2D(app.get_RenderDevice(), TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight);
+		_fontTexture.create_texture2D(app.get_RenderDevice(), TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight);
 
-		MeshGenerator<DEFAULT_FONT_VS_INPUT>::push_2D_rectangle(Color(), float2(512, 480), float2(256, 240), 0.0f, _defaultFontVertices, _defaultFontIndices);
-		_defaultFontVertices[0]._texcoord = float2(0, 0);
-		_defaultFontVertices[1]._texcoord = float2(1, 0);
-		_defaultFontVertices[2]._texcoord = float2(0, 1);
-		_defaultFontVertices[3]._texcoord = float2(1, 1);
-		_defaultFontVertexBuffer.create_buffer(app.get_RenderDevice(), ResourceType::VertexBuffer, &_defaultFontVertices[0], sizeof(DEFAULT_FONT_VS_INPUT), (uint32)_defaultFontVertices.size());
-		_defaultFontIndexBuffer.create_buffer(app.get_RenderDevice(), ResourceType::IndexBuffer, &_defaultFontIndices[0], sizeof(uint32), (uint32)_defaultFontIndices.size());
+		MeshGenerator<FONT_VS_INPUT>::push_2D_rectangle(Color(), float2(512, 480), float2(256, 240), 0.0f, _fontVertices, _fontIndices);
+		_fontVertices[0]._texcoord = float2(0, 0);
+		_fontVertices[1]._texcoord = float2(1, 0);
+		_fontVertices[2]._texcoord = float2(0, 1);
+		_fontVertices[3]._texcoord = float2(1, 1);
+		_fontVertexBuffer.create_buffer(app.get_RenderDevice(), ResourceType::VertexBuffer, &_fontVertices[0], sizeof(FONT_VS_INPUT), (uint32)_fontVertices.size());
+		_fontIndexBuffer.create_buffer(app.get_RenderDevice(), ResourceType::IndexBuffer, &_fontIndices[0], sizeof(uint32), (uint32)_fontIndices.size());
 
 		byte row0[kFontTextureGlyphCountInRow]{ ' ','!','\"','$','#','%','&','\'','(',')','*','+',',','-','.','/' };
 		create_default_FontData_push_glyphRow(0, row0);
@@ -1944,13 +1944,13 @@ namespace SimpleRenderer
 
 	void App::bind_default_FontData()
 	{
-		_renderDevice.bind_Shader(_defaultFontVertexShader);
-		_renderDevice.bind_Shader(_defaultFontPixelShader);
-		_renderDevice.bind_ShaderInputLayout(_defaultFontShaderInputLayout);
-		_renderDevice.bind_ShaderResource(ShaderType::VertexShader, _defaultFontCBMatrices, 0);
-		_renderDevice.bind_ShaderResource(ShaderType::PixelShader, _defaultFontTexture, 0);
-		_renderDevice.bind_input(_defaultFontVertexBuffer, 0);
-		_renderDevice.bind_input(_defaultFontIndexBuffer, 0);
+		_renderDevice.bind_Shader(_fontVertexShader);
+		_renderDevice.bind_Shader(_fontPixelShader);
+		_renderDevice.bind_ShaderInputLayout(_fontShaderInputLayout);
+		_renderDevice.bind_ShaderResource(ShaderType::VertexShader, _fontCBMatrices, 0);
+		_renderDevice.bind_ShaderResource(ShaderType::PixelShader, _fontTexture, 0);
+		_renderDevice.bind_input(_fontVertexBuffer, 0);
+		_renderDevice.bind_input(_fontIndexBuffer, 0);
 	}
 
 	bool read_file(const std::string& file_name, std::string& out_content)
