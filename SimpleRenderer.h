@@ -756,7 +756,7 @@ namespace SimpleRenderer
 			return inputElement;
 		}
 
-		uint32 compute_InputElement_byte_size(const InputElement& inputElement)
+		static uint32 compute_InputElement_byte_size(const InputElement& inputElement)
 		{
 			switch (inputElement._format)
 			{
@@ -776,7 +776,7 @@ namespace SimpleRenderer
 		}
 
 #if defined(SR_DIRECTX)
-		D3D11_INPUT_CLASSIFICATION DX_getInputSlotClass(const InputSlotClass& inputSlotClass)
+		static D3D11_INPUT_CLASSIFICATION DX_getInputSlotClass(const InputSlotClass& inputSlotClass)
 		{
 			static constexpr D3D11_INPUT_CLASSIFICATION kSlotClasses[]
 			{
@@ -789,11 +789,13 @@ namespace SimpleRenderer
 #endif // defined(SR_DIRECTX)
 
 	private:
+		vector<InputElement> _inputElements;
+		uint32 _inputTotalByteSize = 0;
+	
+	private:
 #if defined(SR_DIRECTX)
 		ComPtr<ID3D11InputLayout> _inputLayout;
-		vector<D3D11_INPUT_ELEMENT_DESC> _inputElements;
 #endif // defined(SR_DIRECTX)
-		uint32 _inputTotalByteSize = 0;
 	};
 
 	class Shader
@@ -1249,25 +1251,13 @@ namespace SimpleRenderer
 
 	void ShaderInputLayout::clear_InputElements()
 	{
-#if defined(SR_DIRECTX)
 		_inputElements.clear();
-#endif // defined(SR_DIRECTX)
 		_inputTotalByteSize = 0;
 	}
 
 	void ShaderInputLayout::push_InputElement(const InputElement& newInputElement)
 	{
-#if defined(SR_DIRECTX)
-		D3D11_INPUT_ELEMENT_DESC inputElementDesc{};
-		inputElementDesc.AlignedByteOffset = _inputTotalByteSize;
-		inputElementDesc.Format = DX_getInputFormat(newInputElement._format);
-		inputElementDesc.InputSlot = newInputElement._inputSlot;
-		inputElementDesc.InputSlotClass = DX_getInputSlotClass(newInputElement._inputSlotClass);
-		inputElementDesc.SemanticName = newInputElement._semanticName;
-		inputElementDesc.SemanticIndex = newInputElement._semanticIndex;
-		inputElementDesc.InstanceDataStepRate = newInputElement._instanceStepRate;
-		_inputElements.push_back(inputElementDesc);
-#endif // defined(SR_DIRECTX)
+		_inputElements.push_back(newInputElement);
 		_inputTotalByteSize += compute_InputElement_byte_size(newInputElement);
 	}
 
@@ -1565,7 +1555,23 @@ namespace SimpleRenderer
 		}
 
 #if defined(SR_DIRECTX)
-		if (SUCCEEDED(_device->CreateInputLayout(&shaderInputLayout._inputElements[0], static_cast<UINT>(shaderInputLayout._inputElements.size()),
+		vector<D3D11_INPUT_ELEMENT_DESC> DX_inputElements;
+		uint32 inputTotalByteSize = 0;
+		for (const ShaderInputLayout::InputElement& inputElement : shaderInputLayout._inputElements)
+		{
+			D3D11_INPUT_ELEMENT_DESC inputElementDesc{};
+			inputElementDesc.AlignedByteOffset = inputTotalByteSize;
+			inputElementDesc.Format = DX_getInputFormat(inputElement._format);
+			inputElementDesc.InputSlot = inputElement._inputSlot;
+			inputElementDesc.InputSlotClass = ShaderInputLayout::DX_getInputSlotClass(inputElement._inputSlotClass);
+			inputElementDesc.SemanticName = inputElement._semanticName;
+			inputElementDesc.SemanticIndex = inputElement._semanticIndex;
+			inputElementDesc.InstanceDataStepRate = inputElement._instanceStepRate;
+			DX_inputElements.push_back(inputElementDesc);
+
+			inputTotalByteSize += ShaderInputLayout::compute_InputElement_byte_size(inputElement);
+		}
+		if (SUCCEEDED(_device->CreateInputLayout(&DX_inputElements[0], static_cast<UINT>(DX_inputElements.size()),
 			vertexShader._shaderBlob->GetBufferPointer(), vertexShader._shaderBlob->GetBufferSize(), shaderInputLayout._inputLayout.ReleaseAndGetAddressOf())))
 		{
 			return true;
