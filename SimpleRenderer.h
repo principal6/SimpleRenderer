@@ -1,26 +1,11 @@
 #pragma once
 
-#include <d3d11.h>
-#include <wrl.h>
-#include <Windows.h>
-#include <windowsx.h>
 #include <iostream>
 #include <cmath>
 #include <vector>
 #include <string>
 #include <unordered_map>
-#include <d3dcompiler.h>
 #include <fstream>
-
-#pragma comment(lib, "d3d11.lib")
-#pragma comment(lib, "d3dcompiler.lib")
-
-namespace SimpleRenderer
-{
-#define SR_LOG_ERROR(content) { std::cout << content; ::DebugBreak(); }
-#define SR_ASSERT(condition, content) if (!(condition)) { SR_LOG_ERROR(content); }
-#define SR_STATIC_ASSERT(condition, content) static_assert(condition, content)
-#define SR_ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 #if defined(_WIN32)
 #define SR_WINDOWS
@@ -28,8 +13,24 @@ namespace SimpleRenderer
 
 #if defined(SR_WINDOWS)
 #define SR_DIRECTX
+#include <wrl.h>
+#include <Windows.h>
+#include <windowsx.h>
 #endif // defined(SR_WINDOWS)
 
+#if defined(SR_DIRECTX)
+#include <d3d11.h>
+#include <d3dcompiler.h>
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "d3dcompiler.lib")
+#endif // defined(SR_DIRECTX)
+
+namespace SimpleRenderer
+{
+#define SR_LOG_ERROR(content) { std::cout << content; ::DebugBreak(); }
+#define SR_ASSERT(condition, content) if (!(condition)) { SR_LOG_ERROR(content); }
+#define SR_STATIC_ASSERT(condition, content) static_assert(condition, content)
+#define SR_ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 #pragma region Aliases
 	using Microsoft::WRL::ComPtr;
