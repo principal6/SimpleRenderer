@@ -52,6 +52,18 @@ namespace SimpleRenderer
 	using u32 = uint32;
 	using i64 = int64;
 	using u64 = uint64;
+
+	using String = std::string;
+	template<typename T>
+	String toString(const T& value) { return std::to_string(value); }
+	template<typename T>
+	void swap(T&& a, T&& b) { std::swap(a, b); }
+	template<typename T>
+	using vector = std::vector<T>;
+	template<typename Key, typename Value>
+	using HashMap = std::unordered_map<Key, Value>;
+	template<typename T1, typename T2>
+	using Pair = std::pair<T1, T2>;
 #pragma endregion
 
 #pragma region Forward Declaration
@@ -213,6 +225,8 @@ namespace SimpleRenderer
 		union { struct { float x; float y; }; float f[2]; };
 		float2 operator*(const float2& rhs) { return float2(x * rhs.x, y * rhs.y); }
 	};
+	using f32v2 = float2;
+
 	struct float3
 	{
 		constexpr float3() : float3(0, 0, 0) { __noop; }
@@ -240,6 +254,8 @@ namespace SimpleRenderer
 		void set_point(const float2& position) { x = position.x; y = position.y; z = 0; }
 		union { struct { float x; float y; float z; }; float f[3]; };
 	};
+	using f32v3 = float3;
+
 	struct float4
 	{
 		constexpr float4() : float4(0, 0, 0, 0) { __noop; }
@@ -266,6 +282,8 @@ namespace SimpleRenderer
 		void set_point(const float2& position) { x = position.x; y = position.y; z = 0; w = 1; }
 		union { struct { float x; float y; float z; float w; }; float f[4]; };
 	};
+	using f32v4 = float4;
+
 	// quaternion = xi + yj + zk + w
 	struct quaternion
 	{
@@ -325,6 +343,7 @@ namespace SimpleRenderer
 		static quaternion conjugate(const quaternion& q) noexcept { return quaternion(-q.x, -q.y, -q.z, q.w); }
 		float x; float y; float z; float w;
 	};
+
 	struct float2x2
 	{
 		constexpr float2x2() : float2x2(1, 0, 0, 1) { __noop; }
@@ -360,6 +379,8 @@ namespace SimpleRenderer
 			};
 		};
 	};
+	using f32m2x2 = float2x2;
+
 	struct float4x4
 	{
 		constexpr float4x4() : float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) { __noop; }
@@ -445,6 +466,8 @@ namespace SimpleRenderer
 			};
 		};
 	};
+	using f32m4x4 = float4x4;
+
 	struct Transform2D
 	{
 		Transform2D() : Transform2D(0.0f) { __noop; }
@@ -478,6 +501,7 @@ namespace SimpleRenderer
 		float _rotation;
 		float2 _translation;
 	};
+
 	struct Transform
 	{
 		float4x4 create_float4x4() const
@@ -519,6 +543,7 @@ namespace SimpleRenderer
 		quaternion _rotation;
 		float3 _translation;
 	};
+
 	using Color = float4;
 #pragma endregion
 
@@ -531,6 +556,7 @@ namespace SimpleRenderer
 	{
 		R8_UNORM,
 		R8G8B8A8_UNORM,
+		Count
 	};
 	enum class ResourceType
 	{
@@ -623,8 +649,8 @@ namespace SimpleRenderer
 		const FontGlyphMeta& get_GlyphMeta(const byte& ch) const;
 
 	private:
-		std::vector<FontGlyphMeta> _glyphMetas;
-		std::unordered_map<byte, uint64> _glyphMap;
+		vector<FontGlyphMeta> _glyphMetas;
+		HashMap<byte, uint64> _glyphMap;
 	};
 
 	struct ShaderHeaderSet : public ID3DInclude
@@ -634,31 +660,66 @@ namespace SimpleRenderer
 		virtual ~ShaderHeaderSet() = default;
 
 	public:
-		void push_shader_header(const std::string& headerName, const std::string& headerCode);
+		void push_shader_header(const String& headerName, const String& headerCode);
 
 	public:
 		virtual HRESULT WINAPI Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) override final;
 		virtual HRESULT WINAPI Close(LPCVOID pData) override final { return S_OK; }
 
 	public:
-		std::vector<std::string> _headerNames;
-		std::vector<std::string> _headerCodes;
+		vector<String> _headerNames;
+		vector<String> _headerCodes;
 	};
+
+	enum class GraphicsFormat
+	{
+		R32G32B32A32_FLOAT,
+		R32G32B32_FLOAT,
+		R32G32_FLOAT,
+		R32_FLOAT,
+		R32_UINT,
+		R16_UINT,
+		R8G8B8A8_UNORM,
+		Count
+	};
+
+#if defined(SR_DIRECTX)
+	DXGI_FORMAT DX_getInputFormat(const GraphicsFormat& inputFormat)
+	{
+		static constexpr DXGI_FORMAT kFormats[]
+		{
+			DXGI_FORMAT_R32G32B32A32_FLOAT,
+			DXGI_FORMAT_R32G32B32_FLOAT,
+			DXGI_FORMAT_R32G32_FLOAT,
+			DXGI_FORMAT_R32_FLOAT,
+			DXGI_FORMAT_R32_UINT,
+			DXGI_FORMAT_R16_UINT,
+			DXGI_FORMAT_R8G8B8A8_UNORM,
+		};
+		SR_STATIC_ASSERT(SR_ARRAY_SIZE(kFormats) == static_cast<size_t>(GraphicsFormat::Count), "The sizes must match each other!");
+		return kFormats[static_cast<size_t>(inputFormat)];
+	}
+
+	DXGI_FORMAT DX_getTextureFormat(const TextureFormat& format)
+	{
+		switch (format)
+		{
+		case TextureFormat::R8_UNORM:
+			return DXGI_FORMAT::DXGI_FORMAT_R8_UNORM;
+		case TextureFormat::R8G8B8A8_UNORM:
+			return DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
+		default:
+			break;
+		}
+		SR_ASSERT(false, "This texture format is not supported yet!");
+		return DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
+	}
+#endif // defined(SR_DIRECTX)
 
 	struct ShaderInputLayout
 	{
 		friend RenderDevice;
 
-		enum class InputFormat
-		{
-			R32G32B32A32_FLOAT,
-			R32G32B32_FLOAT,
-			R32G32_FLOAT,
-			R32_FLOAT,
-			R32_UINT,
-			R8G8B8A8_UNORM,
-			Count
-		};
 		enum class InputSlotClass
 		{
 			PerVertexData,
@@ -667,7 +728,7 @@ namespace SimpleRenderer
 		};
 		struct InputElement
 		{
-			InputFormat _format = InputFormat::R32G32B32A32_FLOAT;
+			GraphicsFormat _format = GraphicsFormat::R32G32B32A32_FLOAT;
 			uint32 _inputSlot = 0;
 			InputSlotClass _inputSlotClass = InputSlotClass::PerVertexData;
 			const char* _semanticName = nullptr;
@@ -675,10 +736,10 @@ namespace SimpleRenderer
 			uint32 _instanceStepRate = 0;
 		};
 
-		static InputElement create_InputElement_float4(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(InputFormat::R32G32B32A32_FLOAT, semanticName, semanticIndex); }
-		static InputElement create_InputElement_float3(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(InputFormat::R32G32B32_FLOAT, semanticName, semanticIndex); }
-		static InputElement create_InputElement_float2(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(InputFormat::R32G32_FLOAT, semanticName, semanticIndex); }
-		static InputElement create_InputElement_float(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(InputFormat::R32_FLOAT, semanticName, semanticIndex); }
+		static InputElement create_InputElement_float4(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32G32B32A32_FLOAT, semanticName, semanticIndex); }
+		static InputElement create_InputElement_float3(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32G32B32_FLOAT, semanticName, semanticIndex); }
+		static InputElement create_InputElement_float2(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32G32_FLOAT, semanticName, semanticIndex); }
+		static InputElement create_InputElement_float(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32_FLOAT, semanticName, semanticIndex); }
 
 		void clear_InputElements();
 		void push_InputElement(const InputElement& newInputElement);
@@ -686,7 +747,7 @@ namespace SimpleRenderer
 		bool create_InputLayout(RenderDevice& renderDevice, const Shader& vertexShader);
 
 	private:
-		static InputElement __create_InputElement_common(const InputFormat format, const char* const semanticName, const uint32 semanticIndex)
+		static InputElement __create_InputElement_common(const GraphicsFormat format, const char* const semanticName, const uint32 semanticIndex)
 		{
 			InputElement inputElement;
 			inputElement._format = format;
@@ -699,13 +760,13 @@ namespace SimpleRenderer
 		{
 			switch (inputElement._format)
 			{
-			case InputFormat::R32G32B32A32_FLOAT:
+			case GraphicsFormat::R32G32B32A32_FLOAT:
 				return 16;
-			case InputFormat::R32G32B32_FLOAT:
+			case GraphicsFormat::R32G32B32_FLOAT:
 				return 12;
-			case InputFormat::R32G32_FLOAT:
+			case GraphicsFormat::R32G32_FLOAT:
 				return 8;
-			case InputFormat::R32_FLOAT:
+			case GraphicsFormat::R32_FLOAT:
 				return 4;
 			default:
 				break;
@@ -715,21 +776,6 @@ namespace SimpleRenderer
 		}
 
 #if defined(SR_DIRECTX)
-		DXGI_FORMAT DX_getInputFormat(const InputFormat& inputFormat)
-		{
-			static constexpr DXGI_FORMAT kFormats[]
-			{
-				DXGI_FORMAT_R32G32B32A32_FLOAT,
-				DXGI_FORMAT_R32G32B32_FLOAT,
-				DXGI_FORMAT_R32G32_FLOAT,
-				DXGI_FORMAT_R32_FLOAT,
-				DXGI_FORMAT_R32_UINT,
-				DXGI_FORMAT_R8G8B8A8_UNORM,
-			};
-			SR_STATIC_ASSERT(SR_ARRAY_SIZE(kFormats) == static_cast<size_t>(InputFormat::Count), "The sizes must match each other!");
-			return kFormats[static_cast<size_t>(inputFormat)];
-		}
-
 		D3D11_INPUT_CLASSIFICATION DX_getInputSlotClass(const InputSlotClass& inputSlotClass)
 		{
 			static constexpr D3D11_INPUT_CLASSIFICATION kSlotClasses[]
@@ -745,7 +791,7 @@ namespace SimpleRenderer
 	private:
 #if defined(SR_DIRECTX)
 		ComPtr<ID3D11InputLayout> _inputLayout;
-		std::vector<D3D11_INPUT_ELEMENT_DESC> _inputElements;
+		vector<D3D11_INPUT_ELEMENT_DESC> _inputElements;
 #endif // defined(SR_DIRECTX)
 		uint32 _inputTotalByteSize = 0;
 	};
@@ -763,9 +809,11 @@ namespace SimpleRenderer
 
 	private:
 		ShaderType _type = ShaderType::VertexShader;
+#if defined(SR_DIRECTX)
 		ComPtr<ID3D10Blob> _shaderBlob;
 		ComPtr<ID3D10Blob> _errorMessageBlob;
 		ComPtr<ID3D11DeviceChild> _shader;
+#endif // defined(SR_DIRECTX)
 	};
 
 	// Buffer or Texture
@@ -774,8 +822,7 @@ namespace SimpleRenderer
 		friend RenderDevice;
 
 	public:
-		//static constexpr DXGI_FORMAT kIndexBufferFormat = DXGI_FORMAT::DXGI_FORMAT_R16_UINT;
-		static constexpr DXGI_FORMAT kIndexBufferFormat = DXGI_FORMAT::DXGI_FORMAT_R32_UINT;
+		static constexpr GraphicsFormat kIndexBufferFormat = GraphicsFormat::R32_UINT;
 
 	public:
 		Resource() : _type{ ResourceType::VertexBuffer }, _format{ TextureFormat::R8G8B8A8_UNORM }, _byteSize{ 0 }, _elementStride{ 0 }, _elementMaxCount{ 0 }, _width{ 0 } { __noop; }
@@ -787,7 +834,6 @@ namespace SimpleRenderer
 		bool update_resource(RenderDevice& renderDevice, const void* const content, const uint32 elementStride, const uint32 elementCount);
 
 	private:
-		static DXGI_FORMAT __convert_to_DXGI_FORMAT(const TextureFormat& format);
 		static uint32 __compute_element_stride(const TextureFormat& format);
 
 	public:
@@ -799,15 +845,17 @@ namespace SimpleRenderer
 		uint32 _width;
 
 	private:
+#if defined(SR_DIRECTX)
 		ComPtr<ID3D11Resource> _resource;
 		ComPtr<ID3D11View> _view; // Only used for Texture and StructuredBuffer
+#endif // defined(SR_DIRECTX)
 	};
 
 	template<typename Vertex>
 	class MeshGenerator
 	{
 	public:
-		static void push_3D_triangle(const Color& color, const float4& a, const float4& b, const float4& c, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+		static void push_3D_triangle(const Color& color, const float4& a, const float4& b, const float4& c, vector<Vertex>& vertices, vector<uint32>& indices)
 		{
 			const uint64 vertexBase = vertices.size();
 			vertices.resize(vertexBase + 3);
@@ -827,7 +875,7 @@ namespace SimpleRenderer
 			push_index(indices, vertexBase + 2);
 		}
 
-		static void push_2D_triangle(const Color& color, const float2& a, const float2& b, const float2& c, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+		static void push_2D_triangle(const Color& color, const float2& a, const float2& b, const float2& c, vector<Vertex>& vertices, vector<uint32>& indices)
 		{
 			const uint64 vertexBase = vertices.size();
 			vertices.resize(vertexBase + 3);
@@ -847,7 +895,7 @@ namespace SimpleRenderer
 			push_index(indices, vertexBase + 2);
 		}
 
-		static void push_2D_rectangle(const Color& color, const float2& size, const float2& centerPosition, const float rotationAngle, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+		static void push_2D_rectangle(const Color& color, const float2& size, const float2& centerPosition, const float rotationAngle, vector<Vertex>& vertices, vector<uint32>& indices)
 		{
 			const uint64 vertexBase = vertices.size();
 			vertices.resize(vertexBase + 4);
@@ -878,7 +926,7 @@ namespace SimpleRenderer
 			push_index(indices, vertexBase + 3);
 		}
 
-		static void push_2D_circle(const Color& color, const float2& centerPosition, float radius, uint32 sideCount, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+		static void push_2D_circle(const Color& color, const float2& centerPosition, float radius, uint32 sideCount, vector<Vertex>& vertices, vector<uint32>& indices)
 		{
 			radius = max(radius, 1.0f);
 			sideCount = max(sideCount, 4);
@@ -905,7 +953,7 @@ namespace SimpleRenderer
 			indices[indices.size() - 1] = static_cast<uint32>(vertexBase + 1);
 		}
 
-		static void push_2D_lineSegment(const Color& color, const float2& a, const float2& b, float thickness, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+		static void push_2D_lineSegment(const Color& color, const float2& a, const float2& b, float thickness, vector<Vertex>& vertices, vector<uint32>& indices)
 		{
 			thickness = max(thickness, 1.0f);
 
@@ -922,7 +970,7 @@ namespace SimpleRenderer
 			push_2D_rectangle(color, float2(l, thickness), m, rotationAngle, vertices, indices);
 		}
 
-		static void push_2D_arrow(const Color& color, const float2& a, const float2& b, float thickness, float head_length_ratio, float head_width_scale, std::vector<Vertex>& vertices, std::vector<uint32>& indices)
+		static void push_2D_arrow(const Color& color, const float2& a, const float2& b, float thickness, float head_length_ratio, float head_width_scale, vector<Vertex>& vertices, vector<uint32>& indices)
 		{
 			thickness = max(thickness, 1.0f);
 
@@ -947,7 +995,7 @@ namespace SimpleRenderer
 			push_2D_triangle(color, head_right, head_top, head_left, vertices, indices);
 		}
 
-		static void fill_vertex_color(std::vector<Vertex>& vertices, const Color& color)
+		static void fill_vertex_color(vector<Vertex>& vertices, const Color& color)
 		{
 			for (auto& vertex : vertices)
 			{
@@ -955,7 +1003,7 @@ namespace SimpleRenderer
 			}
 		}
 
-		static void fill_vertex_color(const size_t vertexOffset, std::vector<Vertex>& vertices, const Color& color)
+		static void fill_vertex_color(const size_t vertexOffset, vector<Vertex>& vertices, const Color& color)
 		{
 			for (size_t i = vertexOffset; i < vertices.size(); i++)
 			{
@@ -964,7 +1012,7 @@ namespace SimpleRenderer
 		}
 
 	private:
-		static void push_index(std::vector<uint32>& indices, const uint64 index)
+		static void push_index(vector<uint32>& indices, const uint64 index)
 		{
 			indices.push_back(static_cast<uint32>(index));
 		}
@@ -1114,7 +1162,7 @@ namespace SimpleRenderer
 		void begin_rendering();
 		void draw(const uint32 vertexCount);
 		void draw_indexed(const uint32 indexCount);
-		void draw_text(const Color& color, const std::string& text, const float2& position);
+		void draw_text(const Color& color, const String& text, const float2& position);
 		void end_rendering();
 
 	public:
@@ -1148,8 +1196,8 @@ namespace SimpleRenderer
 		Resource _fontTexture;
 		Resource _fontVertexBuffer;
 		Resource _fontIndexBuffer;
-		std::vector<FONT_VS_INPUT> _fontVertices;
-		std::vector<uint32> _fontIndices;
+		vector<FONT_VS_INPUT> _fontVertices;
+		vector<uint32> _fontIndices;
 		float2 _fontScale = float2(1.25f, 2.25f);
 		FontData _defaultFontData;
 	};
@@ -1165,7 +1213,7 @@ namespace SimpleRenderer
 		}
 
 		_glyphMetas.push_back(glyphMeta);
-		_glyphMap.insert(std::pair<byte, uint64>(glyphMeta._ch, _glyphMetas.size() - 1));
+		_glyphMap.insert(Pair<byte, uint64>(glyphMeta._ch, _glyphMetas.size() - 1));
 	}
 
 	const FontGlyphMeta& FontData::get_GlyphMeta(const byte& ch) const
@@ -1178,7 +1226,7 @@ namespace SimpleRenderer
 		return _glyphMetas[found->second];
 	}
 
-	void ShaderHeaderSet::push_shader_header(const std::string& headerName, const std::string& headerCode)
+	void ShaderHeaderSet::push_shader_header(const String& headerName, const String& headerCode)
 	{
 		_headerNames.push_back(headerName);
 		_headerCodes.push_back(headerCode);
@@ -1246,21 +1294,6 @@ namespace SimpleRenderer
 	bool Resource::update_resource(RenderDevice& renderDevice, const void* const content, const uint32 elementStride, const uint32 elementCount)
 	{
 		return renderDevice.update_resource(content, elementStride, elementCount, *this);
-	}
-
-	DXGI_FORMAT Resource::__convert_to_DXGI_FORMAT(const TextureFormat& format)
-	{
-		switch (format)
-		{
-		case TextureFormat::R8_UNORM:
-			return DXGI_FORMAT::DXGI_FORMAT_R8_UNORM;
-		case TextureFormat::R8G8B8A8_UNORM:
-			return DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
-		default:
-			break;
-		}
-		SR_ASSERT(false, "This texture format is not supported yet!");
-		return DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
 	}
 
 	uint32 Resource::__compute_element_stride(const TextureFormat& format)
@@ -1565,7 +1598,7 @@ namespace SimpleRenderer
 		HRESULT result = ::D3DCompile(sourceCode, ::strlen(sourceCode), shaderIdentifier, nullptr, shaderHeaderSet, entryPoint, target, debugFlag, 0, shader._shaderBlob.ReleaseAndGetAddressOf(), shader._errorMessageBlob.ReleaseAndGetAddressOf());
 		if (FAILED(result))
 		{
-			std::string errorMessages(reinterpret_cast<char*>(shader._errorMessageBlob->GetBufferPointer()));
+			String errorMessages(reinterpret_cast<char*>(shader._errorMessageBlob->GetBufferPointer()));
 			SR_LOG_ERROR("Shader compile failed.");
 			return false;
 		}
@@ -1605,7 +1638,7 @@ namespace SimpleRenderer
 		texture2DDescriptor.Height = height;
 		texture2DDescriptor.MipLevels = 1;
 		texture2DDescriptor.ArraySize = 1;
-		texture2DDescriptor.Format = Resource::__convert_to_DXGI_FORMAT(format);
+		texture2DDescriptor.Format = DX_getTextureFormat(format);
 		texture2DDescriptor.SampleDesc.Count = 1;
 		texture2DDescriptor.Usage = D3D11_USAGE::D3D11_USAGE_DEFAULT;
 		texture2DDescriptor.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
@@ -1632,7 +1665,7 @@ namespace SimpleRenderer
 
 				resource._width = width;
 
-				std::swap(resource._resource, newResource);
+				swap(resource._resource, newResource);
 				return true;
 			}
 		}
@@ -1666,7 +1699,7 @@ namespace SimpleRenderer
 			resource._elementStride = elementStride;
 			resource._elementMaxCount = elementCount;
 
-			std::swap(resource._resource, newResource);
+			swap(resource._resource, newResource);
 			return true;
 		}
 #endif // defined(SR_DIRECTX)
@@ -1773,7 +1806,7 @@ namespace SimpleRenderer
 		{
 			_is_IndexBuffer_bound = true;
 #if defined(SR_DIRECTX)
-			_deviceContext->IASetIndexBuffer(static_cast<ID3D11Buffer*>(resource._resource.Get()), Resource::kIndexBufferFormat, 0);
+			_deviceContext->IASetIndexBuffer(static_cast<ID3D11Buffer*>(resource._resource.Get()), DX_getInputFormat(Resource::kIndexBufferFormat), 0);
 #endif // defined(SR_DIRECTX)
 		}
 		else
@@ -1909,7 +1942,7 @@ namespace SimpleRenderer
 		_renderDevice.draw_indexed(indexCount);
 	}
 
-	void App::draw_text(const Color& color, const std::string& text, const float2& position)
+	void App::draw_text(const Color& color, const String& text, const float2& position)
 	{
 		if (text.empty() == true)
 		{
@@ -2041,7 +2074,7 @@ namespace SimpleRenderer
 		_renderDevice.bind_input(_fontIndexBuffer, 0);
 	}
 
-	bool read_file(const std::string& file_name, std::string& out_content)
+	bool read_file(const String& file_name, String& out_content)
 	{
 		out_content.clear();
 
@@ -2077,12 +2110,12 @@ namespace SimpleRenderer
 			size_t _value_at = 0;
 			size_t _value_length = 0;
 
-			//std::string _debug_name;
-			//std::string _debug_value;
+			//String _debug_name;
+			//String _debug_value;
 
 			bool is_valid() const { return _name_length > 0; }
-			std::string get_name() const { return _XML->_text.substr(_name_at, _name_length); }
-			std::string get_value() const { return _XML->_text.substr(_value_at, _value_length); }
+			String get_name() const { return _XML->_text.substr(_name_at, _name_length); }
+			String get_value() const { return _XML->_text.substr(_value_at, _value_length); }
 			Attribute get_next_attribute() const { return get_node().get_attribute(_index_in_node + 1); }
 
 		private:
@@ -2098,13 +2131,13 @@ namespace SimpleRenderer
 			size_t _index_in_parent_node = 0;
 			size_t _name_at = 0;
 			size_t _name_length = 0;
-			std::vector<size_t> _attribute_IDs;
-			std::vector<size_t> _child_node_IDs;
+			vector<size_t> _attribute_IDs;
+			vector<size_t> _child_node_IDs;
 
-			//std::string _debug_name;
+			//String _debug_name;
 
 			bool is_valid() const { return _name_length > 0; }
-			std::string get_name() const { return _XML->_text.substr(_name_at, _name_length); }
+			String get_name() const { return _XML->_text.substr(_name_at, _name_length); }
 			const Attribute& get_attribute(const size_t index) const { return _XML->get_attribute((index >= _attribute_IDs.size() ? INVALID_ID : _attribute_IDs[index])); }
 			const Node& get_child_node(const size_t index) const { return _XML->get_node((index >= _child_node_IDs.size() ? INVALID_ID : _child_node_IDs[index])); }
 			const Node& get_next_sibling() const { return _XML->get_node(_parent_ID).get_child_node(_index_in_parent_node + 1); }
@@ -2113,7 +2146,7 @@ namespace SimpleRenderer
 			bool has_name() const { return _name_length > 0; }
 			const XML* _XML = nullptr;
 		};
-		bool parse(const std::string& text)
+		bool parse(const String& text)
 		{
 			_text = text;
 			if (check_validity() == false)
@@ -2269,15 +2302,15 @@ namespace SimpleRenderer
 			}
 			return true;
 		}
-		void report_error(const std::string& error) const { _error = error; __report_where(_at); }
-		void report_error(const std::string& error, const size_t at) const { _error = error; __report_where(at); }
-		void __report_where(const size_t at) const { _error += " at["; _error += std::to_string(at); _error += "] line["; _error += std::to_string(_line); _error += "]"; }
+		void report_error(const String& error) const { _error = error; __report_where(_at); }
+		void report_error(const String& error, const size_t at) const { _error = error; __report_where(at); }
+		void __report_where(const size_t at) const { _error += " at["; _error += toString(at); _error += "] line["; _error += toString(_line); _error += "]"; }
 
 	private:
-		std::string _text;
-		std::vector<Node> _nodes;
-		std::vector<Attribute> _attributes;
-		mutable std::string _error;
+		String _text;
+		vector<Node> _nodes;
+		vector<Attribute> _attributes;
+		mutable String _error;
 		size_t _at = 0;
 		size_t _line = 0;
 
@@ -2375,8 +2408,8 @@ namespace SimpleRenderer
 		cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(kScreenSize);
 		vscbMatrices.create_buffer(app.get_RenderDevice(), ResourceType::ConstantBuffer, &cb_matrices, sizeof(SAMPLE_CB_MATRICES), 1);
 
-		std::vector<SAMPLE_VS_INPUT> vertices;
-		std::vector<uint32> indices;
+		vector<SAMPLE_VS_INPUT> vertices;
+		vector<uint32> indices;
 		Resource vertexBuffer;
 		vertexBuffer._type = ResourceType::VertexBuffer;
 		Resource indexBuffer;

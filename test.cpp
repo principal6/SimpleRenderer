@@ -66,7 +66,7 @@ namespace GJK
 	size_t g_max_step = 0;
 	struct Shape2D
 	{
-		std::vector<float2> _points;
+		vector<float2> _points;
 		float2 _center;
 		float2 support(const float2& direction) const
 		{
@@ -99,7 +99,7 @@ namespace GJK
 				_points[i].y = rotated.y;
 			}
 		}
-		void draw_line_semgments_to(const Color& color, std::vector<VS_INPUT>& vertices, std::vector<uint32>& indices)
+		void draw_line_semgments_to(const Color& color, vector<VS_INPUT>& vertices, vector<uint32>& indices)
 		{
 			if (_points.size() <= 1)
 			{
@@ -112,7 +112,7 @@ namespace GJK
 				MeshGenerator<VS_INPUT>::push_2D_lineSegment(color, _center + _points[iter], _center + _points[prev], 2.0f, vertices, indices);
 			}
 		}
-		void draw_points_to(const Color& color, std::vector<VS_INPUT>& vertices, std::vector<uint32>& indices)
+		void draw_points_to(const Color& color, vector<VS_INPUT>& vertices, vector<uint32>& indices)
 		{
 			if (_points.size() <= 1)
 			{
@@ -149,7 +149,7 @@ namespace GJK
 
 			convexify_Graham_scan_sort_points();
 
-			std::vector<size_t> convex_point_indices;
+			vector<size_t> convex_point_indices;
 			convex_point_indices.push_back(0);
 			convex_point_indices.push_back(1);
 			for (size_t i = 2; i < _points.size(); i++)
@@ -174,7 +174,7 @@ namespace GJK
 					--i;
 				}
 			}
-			std::vector<float2> convex_points;
+			vector<float2> convex_points;
 			for (const auto convex_point_index : convex_point_indices)
 			{
 				convex_points.push_back(_points[convex_point_index]);
@@ -218,7 +218,7 @@ namespace GJK
 				size_t _index = 0;
 				bool operator<(const AngleIndex& rhs) const { return _theta < rhs._theta; }
 			};
-			std::vector<AngleIndex> angleIndices;
+			vector<AngleIndex> angleIndices;
 			for (size_t i = 0; i < _points.size(); i++)
 			{
 				if (i == startPointIndex)
@@ -231,7 +231,7 @@ namespace GJK
 				angleIndices.push_back(AngleIndex(theta, i));
 			}
 			std::sort(angleIndices.begin(), angleIndices.end());
-			std::vector<float2> orderedPoints;
+			vector<float2> orderedPoints;
 			orderedPoints.push_back(startPoint);
 			for (const auto& angleIndex : angleIndices)
 			{
@@ -250,7 +250,7 @@ namespace GJK
 		const float2& a() const { return _points[_validPointCount - 1]; }
 		const float2& b() const { return _points[_validPointCount - 2]; }
 		const float2& c() const { return _points[_validPointCount - 3]; }
-		void draw_to(const Color& color, const Color& color_a, const float2& offset, std::vector<VS_INPUT>& vertices, std::vector<uint32>& indices)
+		void draw_to(const Color& color, const Color& color_a, const float2& offset, vector<VS_INPUT>& vertices, vector<uint32>& indices)
 		{
 			for (size_t i = 0; i < _validPointCount; i++)
 			{
@@ -485,8 +485,8 @@ int main()
 	vertexBuffer._type = ResourceType::VertexBuffer;
 	Resource indexBuffer;
 	indexBuffer._type = ResourceType::IndexBuffer;
-	std::vector<VS_INPUT> vertices;
-	std::vector<uint32> indices;
+	vector<VS_INPUT> vertices;
+	vector<uint32> indices;
 	uint32 mode = 0;
 	uint32 selection = 0;
 	float2 initial_direction = float2(1, 0);
@@ -547,7 +547,7 @@ int main()
 
 		if (app.get_keyboard_up_key() == Window::Key::Enter || is_shapes_loaded == false)
 		{
-			std::string shapes_content;
+			String shapes_content;
 			read_file("shapes.txt", shapes_content);
 
 			XML xml;
@@ -718,7 +718,7 @@ int main()
 
 			app.draw_text((mode == 0 ? yellow_color : white_color), "e: translate", float2(10, 140));
 			app.draw_text((mode == 1 ? yellow_color : white_color), "r: rotate", float2(10, 160));
-			app.draw_text(white_color, "current gjk_max_step: " + std::to_string(GJK::g_max_step), float2(10, 180));
+			app.draw_text(white_color, "current gjk_max_step: " + toString(GJK::g_max_step), float2(10, 180));
 			app.draw_text(white_color, "q: --gjk_max_step", float2(10, 200));
 			app.draw_text(white_color, "w: ++gjk_max_step", float2(10, 220));
 
