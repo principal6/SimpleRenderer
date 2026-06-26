@@ -2010,8 +2010,6 @@ namespace SimpleRenderer
 
 	void App::create_default_FontData()
 	{
-		App& app = *this;
-
 		_fontShaderHeaderSet.push_shader_header("FontShaderHeader", kFontShaderHeaderCode);
 
 		_fontVertexShader.create_Shader(_renderDevice, kFontVertexShaderCode, ShaderType::VertexShader, "FontVertexShader", "main", "vs_5_0", &_fontShaderHeaderSet);
@@ -2036,15 +2034,15 @@ namespace SimpleRenderer
 			const byte byte_ = (kFontTextureRawBitData[byteAt] >> (7 - bitAt)) & 1;
 			bytes[iter] = byte_ * 255;
 		}
-		_fontTexture.create_texture2D(app.get_RenderDevice(), TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight);
+		_fontTexture.create_texture2D(_renderDevice, TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight);
 
 		MeshGenerator<FONT_VS_INPUT>::push_2D_rectangle(Color(), float2(512, 480), float2(256, 240), 0.0f, _fontVertices, _fontIndices);
 		_fontVertices[0]._texcoord = float2(0, 0);
 		_fontVertices[1]._texcoord = float2(1, 0);
 		_fontVertices[2]._texcoord = float2(0, 1);
 		_fontVertices[3]._texcoord = float2(1, 1);
-		_fontVertexBuffer.create_buffer(app.get_RenderDevice(), ResourceType::VertexBuffer, &_fontVertices[0], sizeof(FONT_VS_INPUT), (uint32)_fontVertices.size());
-		_fontIndexBuffer.create_buffer(app.get_RenderDevice(), ResourceType::IndexBuffer, &_fontIndices[0], sizeof(uint32), (uint32)_fontIndices.size());
+		_fontVertexBuffer.create_buffer(_renderDevice, ResourceType::VertexBuffer, &_fontVertices[0], sizeof(FONT_VS_INPUT), (uint32)_fontVertices.size());
+		_fontIndexBuffer.create_buffer(_renderDevice, ResourceType::IndexBuffer, &_fontIndices[0], sizeof(uint32), (uint32)_fontIndices.size());
 
 		byte row0[kFontTextureGlyphCountInRow]{ ' ','!','\"','$','#','%','&','\'','(',')','*','+',',','-','.','/' };
 		create_default_FontData_push_glyphRow(0, row0);
