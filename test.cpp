@@ -457,11 +457,12 @@ int main()
 	Shader vertexShader0;
 	vertexShader0.create_Shader(app.get_RenderDevice(), kVertexShaderCode, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderSet);
 
+	vector<ShaderInputElement> shaderInputElements;
+	shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("POSITION", 0));
+	shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("COLOR", 0));
+	shaderInputElements.push_back(ShaderInputElement::create_InputElement_float2("TEXCOORD", 0));
 	ShaderInputLayout shaderInputLayout;
-	shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("POSITION", 0));
-	shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("COLOR", 0));
-	shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float2("TEXCOORD", 0));
-	shaderInputLayout.create_InputLayout(app.get_RenderDevice(), vertexShader0);
+	shaderInputLayout.create_InputLayout(app.get_RenderDevice(), vertexShader0, shaderInputElements);
 
 	Shader pixelShader0;
 	pixelShader0.create_Shader(app.get_RenderDevice(), kPixelShaderCode, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderSet);

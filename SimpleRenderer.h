@@ -716,49 +716,51 @@ namespace SimpleRenderer
 	}
 #endif // defined(SR_DIRECTX)
 
+	enum class ShaderInputSlotClass
+	{
+		PerVertexData,
+		PerInstanceData,
+		Count
+	};
+
+	struct ShaderInputElement
+	{
+	public:
+		static ShaderInputElement create_InputElement_float4(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32G32B32A32_FLOAT, semanticName, semanticIndex); }
+		static ShaderInputElement create_InputElement_float3(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32G32B32_FLOAT, semanticName, semanticIndex); }
+		static ShaderInputElement create_InputElement_float2(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32G32_FLOAT, semanticName, semanticIndex); }
+		static ShaderInputElement create_InputElement_float(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32_FLOAT, semanticName, semanticIndex); }
+
+	private:
+		static ShaderInputElement __create_InputElement_common(const GraphicsFormat format, const char* const semanticName, const uint32 semanticIndex)
+		{
+			ShaderInputElement shaderInputElement;
+			shaderInputElement._format = format;
+			shaderInputElement._semanticName = semanticName;
+			shaderInputElement._semanticIndex = semanticIndex;
+			return shaderInputElement;
+		}
+
+	public:
+		GraphicsFormat _format = GraphicsFormat::R32G32B32A32_FLOAT;
+		uint32 _inputSlot = 0;
+		ShaderInputSlotClass _inputSlotClass = ShaderInputSlotClass::PerVertexData;
+		const char* _semanticName = nullptr;
+		uint32 _semanticIndex = 0;
+		uint32 _instanceStepRate = 0;
+	};
+
 	struct ShaderInputLayout
 	{
 		friend RenderDevice;
 
-		enum class InputSlotClass
-		{
-			PerVertexData,
-			PerInstanceData,
-			Count
-		};
-		struct InputElement
-		{
-			GraphicsFormat _format = GraphicsFormat::R32G32B32A32_FLOAT;
-			uint32 _inputSlot = 0;
-			InputSlotClass _inputSlotClass = InputSlotClass::PerVertexData;
-			const char* _semanticName = nullptr;
-			uint32 _semanticIndex = 0;
-			uint32 _instanceStepRate = 0;
-		};
-
-		static InputElement create_InputElement_float4(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32G32B32A32_FLOAT, semanticName, semanticIndex); }
-		static InputElement create_InputElement_float3(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32G32B32_FLOAT, semanticName, semanticIndex); }
-		static InputElement create_InputElement_float2(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32G32_FLOAT, semanticName, semanticIndex); }
-		static InputElement create_InputElement_float(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32_FLOAT, semanticName, semanticIndex); }
-
-		void clear_InputElements();
-		void push_InputElement(const InputElement& newInputElement);
-
-		bool create_InputLayout(RenderDevice& renderDevice, const Shader& vertexShader);
+	public:
+		bool create_InputLayout(RenderDevice& renderDevice, const Shader& vertexShader, const vector<ShaderInputElement>& shaderInputElements);
 
 	private:
-		static InputElement __create_InputElement_common(const GraphicsFormat format, const char* const semanticName, const uint32 semanticIndex)
+		static uint32 compute_InputElement_byte_size(const ShaderInputElement& shaderInputElement)
 		{
-			InputElement inputElement;
-			inputElement._format = format;
-			inputElement._semanticName = semanticName;
-			inputElement._semanticIndex = semanticIndex;
-			return inputElement;
-		}
-
-		static uint32 compute_InputElement_byte_size(const InputElement& inputElement)
-		{
-			switch (inputElement._format)
+			switch (shaderInputElement._format)
 			{
 			case GraphicsFormat::R32G32B32A32_FLOAT:
 				return 16;
@@ -776,22 +778,18 @@ namespace SimpleRenderer
 		}
 
 #if defined(SR_DIRECTX)
-		static D3D11_INPUT_CLASSIFICATION DX_getInputSlotClass(const InputSlotClass& inputSlotClass)
+		static D3D11_INPUT_CLASSIFICATION DX_getInputSlotClass(const ShaderInputSlotClass& inputSlotClass)
 		{
 			static constexpr D3D11_INPUT_CLASSIFICATION kSlotClasses[]
 			{
 				D3D11_INPUT_PER_VERTEX_DATA,
 				D3D11_INPUT_PER_INSTANCE_DATA
 			};
-			SR_STATIC_ASSERT(SR_ARRAY_SIZE(kSlotClasses) == static_cast<size_t>(InputSlotClass::Count), "The sizes must match each other!");
+			SR_STATIC_ASSERT(SR_ARRAY_SIZE(kSlotClasses) == static_cast<size_t>(ShaderInputSlotClass::Count), "The sizes must match each other!");
 			return kSlotClasses[static_cast<size_t>(inputSlotClass)];
 		}
 #endif // defined(SR_DIRECTX)
 
-	private:
-		vector<InputElement> _inputElements;
-		uint32 _inputTotalByteSize = 0;
-	
 	private:
 #if defined(SR_DIRECTX)
 		ComPtr<ID3D11InputLayout> _inputLayout;
@@ -1110,7 +1108,7 @@ namespace SimpleRenderer
 		void destroy_device() {}
 
 	public:
-		bool create_ShaderInputLayout(const Shader& vertexShader, ShaderInputLayout& shaderInputLayout);
+		bool create_ShaderInputLayout(const Shader& vertexShader, const vector<ShaderInputElement>& shaderInputElements, ShaderInputLayout& shaderInputLayout);
 		bool create_Shader(const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet, Shader& shader);
 		bool create_texture2D(const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height, Resource& resource);
 		bool create_buffer(const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount, Resource& resource);
@@ -1249,21 +1247,9 @@ namespace SimpleRenderer
 		return E_FAIL;
 	}
 
-	void ShaderInputLayout::clear_InputElements()
+	bool ShaderInputLayout::create_InputLayout(RenderDevice& renderDevice, const Shader& vertexShader, const vector<ShaderInputElement>& shaderInputElements)
 	{
-		_inputElements.clear();
-		_inputTotalByteSize = 0;
-	}
-
-	void ShaderInputLayout::push_InputElement(const InputElement& newInputElement)
-	{
-		_inputElements.push_back(newInputElement);
-		_inputTotalByteSize += compute_InputElement_byte_size(newInputElement);
-	}
-
-	bool ShaderInputLayout::create_InputLayout(RenderDevice& renderDevice, const Shader& vertexShader)
-	{
-		return renderDevice.create_ShaderInputLayout(vertexShader, *this);
+		return renderDevice.create_ShaderInputLayout(vertexShader, shaderInputElements, *this);
 	}
 
 	bool Shader::create_Shader(RenderDevice& renderDevice, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet)
@@ -1546,9 +1532,9 @@ namespace SimpleRenderer
 		return false;
 	}
 
-	bool RenderDevice::create_ShaderInputLayout(const Shader& vertexShader, ShaderInputLayout& shaderInputLayout)
+	bool RenderDevice::create_ShaderInputLayout(const Shader& vertexShader, const vector<ShaderInputElement>& shaderInputElements, ShaderInputLayout& shaderInputLayout)
 	{
-		if (shaderInputLayout._inputElements.empty())
+		if (shaderInputElements.empty())
 		{
 			SR_LOG_ERROR("Push input elements before creating ShaderInputLayout!");
 			return false;
@@ -1557,19 +1543,19 @@ namespace SimpleRenderer
 #if defined(SR_DIRECTX)
 		vector<D3D11_INPUT_ELEMENT_DESC> DX_inputElements;
 		uint32 inputTotalByteSize = 0;
-		for (const ShaderInputLayout::InputElement& inputElement : shaderInputLayout._inputElements)
+		for (const ShaderInputElement& shaderInputElement : shaderInputElements)
 		{
 			D3D11_INPUT_ELEMENT_DESC inputElementDesc{};
 			inputElementDesc.AlignedByteOffset = inputTotalByteSize;
-			inputElementDesc.Format = DX_getInputFormat(inputElement._format);
-			inputElementDesc.InputSlot = inputElement._inputSlot;
-			inputElementDesc.InputSlotClass = ShaderInputLayout::DX_getInputSlotClass(inputElement._inputSlotClass);
-			inputElementDesc.SemanticName = inputElement._semanticName;
-			inputElementDesc.SemanticIndex = inputElement._semanticIndex;
-			inputElementDesc.InstanceDataStepRate = inputElement._instanceStepRate;
+			inputElementDesc.Format = DX_getInputFormat(shaderInputElement._format);
+			inputElementDesc.InputSlot = shaderInputElement._inputSlot;
+			inputElementDesc.InputSlotClass = ShaderInputLayout::DX_getInputSlotClass(shaderInputElement._inputSlotClass);
+			inputElementDesc.SemanticName = shaderInputElement._semanticName;
+			inputElementDesc.SemanticIndex = shaderInputElement._semanticIndex;
+			inputElementDesc.InstanceDataStepRate = shaderInputElement._instanceStepRate;
 			DX_inputElements.push_back(inputElementDesc);
 
-			inputTotalByteSize += ShaderInputLayout::compute_InputElement_byte_size(inputElement);
+			inputTotalByteSize += ShaderInputLayout::compute_InputElement_byte_size(shaderInputElement);
 		}
 		if (SUCCEEDED(_device->CreateInputLayout(&DX_inputElements[0], static_cast<UINT>(DX_inputElements.size()),
 			vertexShader._shaderBlob->GetBufferPointer(), vertexShader._shaderBlob->GetBufferSize(), shaderInputLayout._inputLayout.ReleaseAndGetAddressOf())))
@@ -2020,10 +2006,11 @@ namespace SimpleRenderer
 
 		_fontVertexShader.create_Shader(_renderDevice, kFontVertexShaderCode, ShaderType::VertexShader, "FontVertexShader", "main", "vs_5_0", &_fontShaderHeaderSet);
 
-		_fontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("POSITION", 0));
-		_fontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("COLOR", 0));
-		_fontShaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float2("TEXCOORD", 0));
-		_fontShaderInputLayout.create_InputLayout(_renderDevice, _fontVertexShader);
+		vector<ShaderInputElement> shaderInputElements;
+		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("POSITION", 0));
+		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("COLOR", 0));
+		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float2("TEXCOORD", 0));
+		_fontShaderInputLayout.create_InputLayout(_renderDevice, _fontVertexShader, shaderInputElements);
 
 		_fontPixelShader.create_Shader(_renderDevice, kFontPixelShaderCode, ShaderType::PixelShader, "FontPixelShader", "main", "ps_5_0", &_fontShaderHeaderSet);
 
@@ -2402,11 +2389,12 @@ namespace SimpleRenderer
 		shaderHeaderSet.push_shader_header("StreamData", kSampleShaderHeaderCode_StreamData);
 		Shader vertexShader;
 		vertexShader.create_Shader(app.get_RenderDevice(), kSampleVertexShaderCode, ShaderType::VertexShader, "SampleVertexShader", "main", "vs_5_0", &shaderHeaderSet);
+		vector<ShaderInputElement> shaderInputElements;
+		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("POSITION", 0));
+		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("COLOR", 0));
+		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float2("TEXCOORD", 0));
 		ShaderInputLayout shaderInputLayout;
-		shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("POSITION", 0));
-		shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float4("COLOR", 0));
-		shaderInputLayout.push_InputElement(ShaderInputLayout::create_InputElement_float2("TEXCOORD", 0));
-		shaderInputLayout.create_InputLayout(app.get_RenderDevice(), vertexShader);
+		shaderInputLayout.create_InputLayout(app.get_RenderDevice(), vertexShader, shaderInputElements);
 		Shader pixelShader;
 		pixelShader.create_Shader(app.get_RenderDevice(), kSamplePixelShaderCode, ShaderType::PixelShader, "SamplePixelShader", "main", "ps_5_0", &shaderHeaderSet);
 		Resource vscbMatrices;
