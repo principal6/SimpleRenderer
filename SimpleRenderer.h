@@ -1311,7 +1311,8 @@ namespace SimpleRenderer
 		return 4;
 	}
 
-	static LRESULT WINAPI windowProcedure(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+#if defined(SR_WINDOWS)
+	static LRESULT WINAPI WIN_windowProcedure(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 	{
 		switch (Msg)
 		{
@@ -1321,6 +1322,7 @@ namespace SimpleRenderer
 		}
 		return ::DefWindowProc(hWnd, Msg, wParam, lParam);
 	}
+#endif // defined(SR_WINDOWS)
 
 	bool Window::create(const Window::CreateDesc& createDesc)
 	{
@@ -1333,7 +1335,7 @@ namespace SimpleRenderer
 		wndClassEx.lpszClassName = TEXT("SimpleRenderer Window");
 		wndClassEx.hbrBackground = ::CreateSolidBrush(RGB(255, 255, 255));
 		wndClassEx.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
-		wndClassEx.lpfnWndProc = windowProcedure;
+		wndClassEx.lpfnWndProc = WIN_windowProcedure;
 		::RegisterClassEx(&wndClassEx);
 
 		wchar_t titleBuffer[256]{};
