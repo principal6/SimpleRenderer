@@ -750,12 +750,13 @@ namespace SimpleRenderer
 		uint32 _instanceStepRate = 0;
 	};
 
-	struct ShaderInputLayout
+	class ShaderInputLayout
 	{
 		friend RenderDevice;
 
 	public:
-		bool create_InputLayout(RenderDevice& renderDevice, const Shader& vertexShader, const vector<ShaderInputElement>& shaderInputElements);
+		ShaderInputLayout() = default;
+		~ShaderInputLayout() = default;
 
 	private:
 		static uint32 compute_InputElement_byte_size(const ShaderInputElement& shaderInputElement)
@@ -804,9 +805,6 @@ namespace SimpleRenderer
 		Shader() = default;
 		~Shader() = default;
 
-	public:
-		bool create_Shader(RenderDevice& renderDevice, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet = nullptr);
-
 	private:
 		ShaderType _type = ShaderType::VertexShader;
 #if defined(SR_DIRECTX)
@@ -827,11 +825,6 @@ namespace SimpleRenderer
 	public:
 		Resource() : _type{ ResourceType::VertexBuffer }, _format{ TextureFormat::R8G8B8A8_UNORM }, _byteSize{ 0 }, _elementStride{ 0 }, _elementMaxCount{ 0 }, _width{ 0 } { __noop; }
 		~Resource() = default;
-
-	public:
-		bool create_texture2D(RenderDevice& renderDevice, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height);
-		bool create_buffer(RenderDevice& renderDevice, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount);
-		bool update_resource(RenderDevice& renderDevice, const void* const content, const uint32 elementStride, const uint32 elementCount);
 
 	private:
 		static uint32 __compute_element_stride(const TextureFormat& format);
@@ -1245,31 +1238,6 @@ namespace SimpleRenderer
 			}
 		}
 		return E_FAIL;
-	}
-
-	bool ShaderInputLayout::create_InputLayout(RenderDevice& renderDevice, const Shader& vertexShader, const vector<ShaderInputElement>& shaderInputElements)
-	{
-		return renderDevice.create_ShaderInputLayout(vertexShader, shaderInputElements, *this);
-	}
-
-	bool Shader::create_Shader(RenderDevice& renderDevice, const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet)
-	{
-		return renderDevice.create_Shader(sourceCode, shaderType, shaderIdentifier, entryPoint, target, shaderHeaderSet, *this);
-	}
-
-	bool Resource::create_texture2D(RenderDevice& renderDevice, const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height)
-	{
-		return renderDevice.create_texture2D(format, resourceContent, width, height, *this);
-	}
-
-	bool Resource::create_buffer(RenderDevice& renderDevice, const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount)
-	{
-		return renderDevice.create_buffer(type, content, elementStride, elementCount, *this);
-	}
-
-	bool Resource::update_resource(RenderDevice& renderDevice, const void* const content, const uint32 elementStride, const uint32 elementCount)
-	{
-		return renderDevice.update_resource(content, elementStride, elementCount, *this);
 	}
 
 	uint32 Resource::__compute_element_stride(const TextureFormat& format)
@@ -1973,8 +1941,8 @@ namespace SimpleRenderer
 	{
 		if (_fontVertices.empty() == false)
 		{
-			_fontVertexBuffer.update_resource(_renderDevice, &_fontVertices[0], sizeof(FONT_VS_INPUT), (uint32)_fontVertices.size());
-			_fontIndexBuffer.update_resource(_renderDevice, &_fontIndices[0], sizeof(uint32), (uint32)_fontIndices.size());
+			_renderDevice.update_resource(&_fontVertices[0], sizeof(FONT_VS_INPUT), (uint32)_fontVertices.size(), _fontVertexBuffer);
+			_renderDevice.update_resource(&_fontIndices[0], sizeof(uint32), (uint32)_fontIndices.size(), _fontIndexBuffer);
 
 			bind_default_FontData();
 
@@ -2004,20 +1972,20 @@ namespace SimpleRenderer
 	{
 		_fontShaderHeaderSet.push_shader_header("FontShaderHeader", kFontShaderHeaderCode);
 
-		_fontVertexShader.create_Shader(_renderDevice, kFontVertexShaderCode, ShaderType::VertexShader, "FontVertexShader", "main", "vs_5_0", &_fontShaderHeaderSet);
+		_renderDevice.create_Shader(kFontVertexShaderCode, ShaderType::VertexShader, "FontVertexShader", "main", "vs_5_0", &_fontShaderHeaderSet, _fontVertexShader);
 
 		vector<ShaderInputElement> shaderInputElements;
 		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("POSITION", 0));
 		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("COLOR", 0));
 		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float2("TEXCOORD", 0));
-		_fontShaderInputLayout.create_InputLayout(_renderDevice, _fontVertexShader, shaderInputElements);
+		_renderDevice.create_ShaderInputLayout(_fontVertexShader, shaderInputElements, _fontShaderInputLayout);
 
-		_fontPixelShader.create_Shader(_renderDevice, kFontPixelShaderCode, ShaderType::PixelShader, "FontPixelShader", "main", "ps_5_0", &_fontShaderHeaderSet);
+		_renderDevice.create_Shader(kFontPixelShaderCode, ShaderType::PixelShader, "FontPixelShader", "main", "ps_5_0", &_fontShaderHeaderSet, _fontPixelShader);
 
 		const uint2& screenSize = _window.get_size();
 		FONT_CB_MATRICES font_cb_matrices;
 		font_cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(screenSize);
-		_fontCBMatrices.create_buffer(_renderDevice, ResourceType::ConstantBuffer, &font_cb_matrices, sizeof(font_cb_matrices), 1);
+		_renderDevice.create_buffer(ResourceType::ConstantBuffer, &font_cb_matrices, sizeof(font_cb_matrices), 1, _fontCBMatrices);
 
 		byte bytes[kFontTextureByteCount]{};
 		for (uint32 iter = 0; iter < kFontTextureByteCount; ++iter)
@@ -2027,15 +1995,15 @@ namespace SimpleRenderer
 			const byte byte_ = (kFontTextureRawBitData[byteAt] >> (7 - bitAt)) & 1;
 			bytes[iter] = byte_ * 255;
 		}
-		_fontTexture.create_texture2D(_renderDevice, TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight);
+		_renderDevice.create_texture2D(TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight, _fontTexture);
 
 		MeshGenerator<FONT_VS_INPUT>::push_2D_rectangle(Color(), float2(512, 480), float2(256, 240), 0.0f, _fontVertices, _fontIndices);
 		_fontVertices[0]._texcoord = float2(0, 0);
 		_fontVertices[1]._texcoord = float2(1, 0);
 		_fontVertices[2]._texcoord = float2(0, 1);
 		_fontVertices[3]._texcoord = float2(1, 1);
-		_fontVertexBuffer.create_buffer(_renderDevice, ResourceType::VertexBuffer, &_fontVertices[0], sizeof(FONT_VS_INPUT), (uint32)_fontVertices.size());
-		_fontIndexBuffer.create_buffer(_renderDevice, ResourceType::IndexBuffer, &_fontIndices[0], sizeof(uint32), (uint32)_fontIndices.size());
+		_renderDevice.create_buffer(ResourceType::VertexBuffer, &_fontVertices[0], sizeof(FONT_VS_INPUT), (uint32)_fontVertices.size(), _fontVertexBuffer);
+		_renderDevice.create_buffer(ResourceType::IndexBuffer, &_fontIndices[0], sizeof(uint32), (uint32)_fontIndices.size(), _fontIndexBuffer);
 
 		byte row0[kFontTextureGlyphCountInRow]{ ' ','!','\"','$','#','%','&','\'','(',')','*','+',',','-','.','/' };
 		create_default_FontData_push_glyphRow(0, row0);
@@ -2388,19 +2356,19 @@ namespace SimpleRenderer
 		ShaderHeaderSet shaderHeaderSet;
 		shaderHeaderSet.push_shader_header("StreamData", kSampleShaderHeaderCode_StreamData);
 		Shader vertexShader;
-		vertexShader.create_Shader(app.get_RenderDevice(), kSampleVertexShaderCode, ShaderType::VertexShader, "SampleVertexShader", "main", "vs_5_0", &shaderHeaderSet);
+		app.get_RenderDevice().create_Shader(kSampleVertexShaderCode, ShaderType::VertexShader, "SampleVertexShader", "main", "vs_5_0", &shaderHeaderSet, vertexShader);
 		vector<ShaderInputElement> shaderInputElements;
 		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("POSITION", 0));
 		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("COLOR", 0));
 		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float2("TEXCOORD", 0));
 		ShaderInputLayout shaderInputLayout;
-		shaderInputLayout.create_InputLayout(app.get_RenderDevice(), vertexShader, shaderInputElements);
+		app.get_RenderDevice().create_ShaderInputLayout(vertexShader, shaderInputElements, shaderInputLayout);
 		Shader pixelShader;
-		pixelShader.create_Shader(app.get_RenderDevice(), kSamplePixelShaderCode, ShaderType::PixelShader, "SamplePixelShader", "main", "ps_5_0", &shaderHeaderSet);
+		app.get_RenderDevice().create_Shader(kSamplePixelShaderCode, ShaderType::PixelShader, "SamplePixelShader", "main", "ps_5_0", &shaderHeaderSet, pixelShader);
 		Resource vscbMatrices;
 		SAMPLE_CB_MATRICES cb_matrices;
 		cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(kScreenSize);
-		vscbMatrices.create_buffer(app.get_RenderDevice(), ResourceType::ConstantBuffer, &cb_matrices, sizeof(SAMPLE_CB_MATRICES), 1);
+		app.get_RenderDevice().create_buffer(ResourceType::ConstantBuffer, &cb_matrices, sizeof(SAMPLE_CB_MATRICES), 1, vscbMatrices);
 
 		vector<SAMPLE_VS_INPUT> vertices;
 		vector<uint32> indices;
@@ -2425,8 +2393,8 @@ namespace SimpleRenderer
 				app.get_RenderDevice().bind_input(indexBuffer, 0);
 				if (vertices.empty() == false)
 				{
-					vertexBuffer.update_resource(app.get_RenderDevice(), &vertices[0], sizeof(SAMPLE_VS_INPUT), (uint32)vertices.size());
-					indexBuffer.update_resource(app.get_RenderDevice(), &indices[0], sizeof(uint32), (uint32)indices.size());
+					app.get_RenderDevice().update_resource(&vertices[0], sizeof(SAMPLE_VS_INPUT), (uint32)vertices.size(), vertexBuffer);
+					app.get_RenderDevice().update_resource(&indices[0], sizeof(uint32), (uint32)indices.size(), indexBuffer);
 					app.get_RenderDevice().draw_indexed((uint32)indices.size());
 				}
 				app.draw_text(Color(1, 1, 1, 1), "Sample Window", float2(10, 10));

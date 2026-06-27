@@ -455,23 +455,23 @@ int main()
 	shaderHeaderSet.push_shader_header("StreamData", kShaderHeaderCode_StreamData);
 
 	Shader vertexShader0;
-	vertexShader0.create_Shader(app.get_RenderDevice(), kVertexShaderCode, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderSet);
+	app.get_RenderDevice().create_Shader(kVertexShaderCode, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderSet, vertexShader0);
 
 	vector<ShaderInputElement> shaderInputElements;
 	shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("POSITION", 0));
 	shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("COLOR", 0));
 	shaderInputElements.push_back(ShaderInputElement::create_InputElement_float2("TEXCOORD", 0));
 	ShaderInputLayout shaderInputLayout;
-	shaderInputLayout.create_InputLayout(app.get_RenderDevice(), vertexShader0, shaderInputElements);
+	app.get_RenderDevice().create_ShaderInputLayout(vertexShader0, shaderInputElements, shaderInputLayout);
 
 	Shader pixelShader0;
-	pixelShader0.create_Shader(app.get_RenderDevice(), kPixelShaderCode, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderSet);
+	app.get_RenderDevice().create_Shader(kPixelShaderCode, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderSet, pixelShader0);
 
 	Resource vscbMatrices;
 	CB_MATRICES cb_matrices;
 	cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(kScreenSize);
 	//cb_matrices._projectionMatrix.make_perspective_projection_matrix(kPi * 0.25f, 0.001f, 1000.0f, kScreenSize.x / kScreenSize.y);
-	vscbMatrices.create_buffer(app.get_RenderDevice(), ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1);
+	app.get_RenderDevice().create_buffer(ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1, vscbMatrices);
 
 	bool is_shapes_loaded = false;
 	float2 positions_source[2]{};
@@ -699,8 +699,8 @@ int main()
 					MeshGenerator<VS_INPUT>::push_2D_arrow(white_color, minkowski_space_origin + float2(0, 200), minkowski_space_origin - float2(0, 200), 1.0f, 0.0625f, 4.0f, vertices, indices);
 				}
 
-				vertexBuffer.update_resource(app.get_RenderDevice(), &vertices[0], sizeof(VS_INPUT), (uint32)vertices.size());
-				indexBuffer.update_resource(app.get_RenderDevice(), &indices[0], sizeof(uint32), (uint32)indices.size());
+				app.get_RenderDevice().update_resource(&vertices[0], sizeof(VS_INPUT), (uint32)vertices.size(), vertexBuffer);
+				app.get_RenderDevice().update_resource(&indices[0], sizeof(uint32), (uint32)indices.size(), indexBuffer);
 			}
 
 			app.get_RenderDevice().bind_Shader(vertexShader0);
