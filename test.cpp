@@ -450,28 +450,29 @@ int main()
 		return -1;
 	}
 	App app{ App(window, Color(0, 0.5f, 1, 1)) };
+	RenderDevice& renderDevice = app.GetRenderDevice();
 
 	ShaderHeaderSet shaderHeaderSet;
 	shaderHeaderSet.PushShaderHeader("StreamData", kShaderHeaderCode_StreamData);
 
 	Shader vertexShader0;
-	app.GetRenderDevice().CreateShader(kVertexShaderCode, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderSet, vertexShader0);
+	renderDevice.CreateShader(kVertexShaderCode, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderSet, vertexShader0);
 
 	vector<ShaderInputElement> shaderInputElements;
 	shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float4("POSITION", 0));
 	shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float4("COLOR", 0));
 	shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float2("TEXCOORD", 0));
 	ShaderInputLayout shaderInputLayout;
-	app.GetRenderDevice().CreateShaderInputLayout(vertexShader0, shaderInputElements, shaderInputLayout);
+	renderDevice.CreateShaderInputLayout(vertexShader0, shaderInputElements, shaderInputLayout);
 
 	Shader pixelShader0;
-	app.GetRenderDevice().CreateShader(kPixelShaderCode, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderSet, pixelShader0);
+	renderDevice.CreateShader(kPixelShaderCode, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderSet, pixelShader0);
 
 	Resource vscbMatrices;
 	CB_MATRICES cb_matrices;
 	cb_matrices._projectionMatrix.MakePixelCoordsProjectionMatrix(kScreenSize);
 	//cb_matrices._projectionMatrix.MakePerspectiveProjectionMatrix(kPi * 0.25f, 0.001f, 1000.0f, kScreenSize.x / kScreenSize.y);
-	app.GetRenderDevice().CreateBuffer(ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1, vscbMatrices);
+	renderDevice.CreateBuffer(ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1, vscbMatrices);
 
 	bool is_shapes_loaded = false;
 	float2 positions_source[2]{};
@@ -699,17 +700,17 @@ int main()
 					MeshGenerator<VS_INPUT>::Push2DArrow(white_color, minkowski_space_origin + float2(0, 200), minkowski_space_origin - float2(0, 200), 1.0f, 0.0625f, 4.0f, vertices, indices);
 				}
 
-				app.GetRenderDevice().UpdateShaderResource(&vertices[0], sizeof(VS_INPUT), (uint32)vertices.size(), vertexBuffer);
-				app.GetRenderDevice().UpdateShaderResource(&indices[0], sizeof(uint32), (uint32)indices.size(), indexBuffer);
+				renderDevice.UpdateShaderResource(&vertices[0], sizeof(VS_INPUT), (uint32)vertices.size(), vertexBuffer);
+				renderDevice.UpdateShaderResource(&indices[0], sizeof(uint32), (uint32)indices.size(), indexBuffer);
 			}
 
-			app.GetRenderDevice().BindShader(vertexShader0);
-			app.GetRenderDevice().BindShaderInputLayout(shaderInputLayout);
-			app.GetRenderDevice().BindShader(pixelShader0);
-			app.GetRenderDevice().BindInput(vertexBuffer, 0);
-			app.GetRenderDevice().BindInput(indexBuffer, 0);
-			app.GetRenderDevice().BindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
-			app.GetRenderDevice().DrawIndexed((uint32)indices.size());
+			renderDevice.BindShader(vertexShader0);
+			renderDevice.BindShaderInputLayout(shaderInputLayout);
+			renderDevice.BindShader(pixelShader0);
+			renderDevice.BindInput(vertexBuffer, 0);
+			renderDevice.BindInput(indexBuffer, 0);
+			renderDevice.BindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
+			renderDevice.DrawIndexed((uint32)indices.size());
 
 			app.DrawTextAt(Color(0, 1, 1, 1), "GJK Algorithm Test", float2(10, 10));
 			app.DrawTextAt((selection == 0 ? yellow_color : white_color), "1: shape A", float2(10, 40));
@@ -723,14 +724,6 @@ int main()
 			app.DrawTextAt(white_color, "w: ++gjk_max_step", float2(10, 220));
 
 			app.DrawTextAt(white_color, "ENTER: load shapes from file", float2(10, 260));
-
-			//char buffer[8]{};
-			//for (size_t i = 0; i < shapeMinkowski._points.size(); ++i)
-			//{
-			//    ::_itoa_s(static_cast<int>(i), buffer, 10);
-			//    const auto& point = shapeMinkowski._points[i];
-			//    app.draw_text(buffer, shapeMinkowski._center + point);
-			//}
 		}
 		app.EndRendering();
 	}

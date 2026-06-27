@@ -2349,22 +2349,24 @@ namespace SimpleRenderer
 		}
 
 		App app{ App(window, Color(0, 0.5f, 1, 1)) };
+		RenderDevice& renderDevice = app.GetRenderDevice();
+
 		ShaderHeaderSet shaderHeaderSet;
 		shaderHeaderSet.PushShaderHeader("StreamData", kSampleShaderHeaderCode_StreamData);
 		Shader vertexShader;
-		app.GetRenderDevice().CreateShader(kSampleVertexShaderCode, ShaderType::VertexShader, "SampleVertexShader", "main", "vs_5_0", &shaderHeaderSet, vertexShader);
+		renderDevice.CreateShader(kSampleVertexShaderCode, ShaderType::VertexShader, "SampleVertexShader", "main", "vs_5_0", &shaderHeaderSet, vertexShader);
 		vector<ShaderInputElement> shaderInputElements;
 		shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float4("POSITION", 0));
 		shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float4("COLOR", 0));
 		shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float2("TEXCOORD", 0));
 		ShaderInputLayout shaderInputLayout;
-		app.GetRenderDevice().CreateShaderInputLayout(vertexShader, shaderInputElements, shaderInputLayout);
+		renderDevice.CreateShaderInputLayout(vertexShader, shaderInputElements, shaderInputLayout);
 		Shader pixelShader;
-		app.GetRenderDevice().CreateShader(kSamplePixelShaderCode, ShaderType::PixelShader, "SamplePixelShader", "main", "ps_5_0", &shaderHeaderSet, pixelShader);
+		renderDevice.CreateShader(kSamplePixelShaderCode, ShaderType::PixelShader, "SamplePixelShader", "main", "ps_5_0", &shaderHeaderSet, pixelShader);
 		Resource vscbMatrices;
 		SAMPLE_CB_MATRICES cb_matrices;
 		cb_matrices._projectionMatrix.MakePixelCoordsProjectionMatrix(kScreenSize);
-		app.GetRenderDevice().CreateBuffer(ResourceType::ConstantBuffer, &cb_matrices, sizeof(SAMPLE_CB_MATRICES), 1, vscbMatrices);
+		renderDevice.CreateBuffer(ResourceType::ConstantBuffer, &cb_matrices, sizeof(SAMPLE_CB_MATRICES), 1, vscbMatrices);
 		vector<SAMPLE_VS_INPUT> vertices;
 		vector<uint32> indices;
 		Resource vertexBuffer;
@@ -2380,17 +2382,17 @@ namespace SimpleRenderer
 				indices.clear();
 
 				MeshGenerator<SAMPLE_VS_INPUT>::Push2DCircle(Color(1, 1, 0, 1), float2(100, 100), 32.0f, 16, vertices, indices);
-				app.GetRenderDevice().BindShaderInputLayout(shaderInputLayout);
-				app.GetRenderDevice().BindShader(vertexShader);
-				app.GetRenderDevice().BindShader(pixelShader);
-				app.GetRenderDevice().BindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
-				app.GetRenderDevice().BindInput(vertexBuffer, 0);
-				app.GetRenderDevice().BindInput(indexBuffer, 0);
+				renderDevice.BindShaderInputLayout(shaderInputLayout);
+				renderDevice.BindShader(vertexShader);
+				renderDevice.BindShader(pixelShader);
+				renderDevice.BindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
+				renderDevice.BindInput(vertexBuffer, 0);
+				renderDevice.BindInput(indexBuffer, 0);
 				if (vertices.empty() == false)
 				{
-					app.GetRenderDevice().UpdateShaderResource(&vertices[0], sizeof(SAMPLE_VS_INPUT), (uint32)vertices.size(), vertexBuffer);
-					app.GetRenderDevice().UpdateShaderResource(&indices[0], sizeof(uint32), (uint32)indices.size(), indexBuffer);
-					app.GetRenderDevice().DrawIndexed((uint32)indices.size());
+					renderDevice.UpdateShaderResource(&vertices[0], sizeof(SAMPLE_VS_INPUT), (uint32)vertices.size(), vertexBuffer);
+					renderDevice.UpdateShaderResource(&indices[0], sizeof(uint32), (uint32)indices.size(), indexBuffer);
+					renderDevice.DrawIndexed((uint32)indices.size());
 				}
 				app.DrawTextAt(Color(1, 1, 1, 1), "Sample Window", float2(10, 10));
 			}
