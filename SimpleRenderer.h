@@ -55,9 +55,9 @@ namespace SimpleRenderer
 
 	using String = std::string;
 	template<typename T>
-	String toString(const T& value) { return std::to_string(value); }
+	String ToString(const T& value) { return std::to_string(value); }
 	template<typename T>
-	void swap(T&& a, T&& b) { std::swap(a, b); }
+	void Swap(T&& a, T&& b) { std::swap(a, b); }
 	template<typename T>
 	using vector = std::vector<T>;
 	template<typename Key, typename Value>
@@ -218,10 +218,10 @@ namespace SimpleRenderer
 		float2& operator/=(const float s) { x /= s; y /= s; return *this; }
 		constexpr float2 operator*(const float s) const { return float2(x * s, y * s); }
 		constexpr float2 operator/(const float s) const { return float2(x / s, y / s); }
-		constexpr float dot(const float2& rhs) const { return x * rhs.x + y * rhs.y; }
-		constexpr float length_sq() const { return dot(*this); }
-		float length() const { return ::sqrt(length_sq()); }
-		void normalize() { *this /= length(); }
+		constexpr float Dot(const float2& rhs) const { return x * rhs.x + y * rhs.y; }
+		constexpr float LengthSq() const { return Dot(*this); }
+		float Length() const { return ::sqrt(LengthSq()); }
+		void Normalize() { *this /= Length(); }
 		union { struct { float x; float y; }; float f[2]; };
 		float2 operator*(const float2& rhs) { return float2(x * rhs.x, y * rhs.y); }
 	};
@@ -245,13 +245,13 @@ namespace SimpleRenderer
 		float3& operator-=(const float3& rhs) { *this = (*this - rhs); return *this; }
 		float3& operator*=(const float s) { *this = (*this * s); return *this; }
 		float3& operator/=(const float s) { *this = (*this / s); return *this; }
-		constexpr float dot(const float3& rhs) const { return x * rhs.x + y * rhs.y + z * rhs.z; }
-		constexpr float3 cross(const float3& rhs) const { return float3(y * rhs.z - z * rhs.y, z * rhs.x - x * rhs.z, x * rhs.y - y * rhs.x); }
-		constexpr float length_sq() const { return dot(*this); }
-		float length() const { return ::sqrt(length_sq()); }
-		void normalize() { *this /= length(); }
-		float3 compute_normalized() const { float3 result = *this; result.normalize(); return result; }
-		void set_point(const float2& position) { x = position.x; y = position.y; z = 0; }
+		constexpr float Dot(const float3& rhs) const { return x * rhs.x + y * rhs.y + z * rhs.z; }
+		constexpr float3 Cross(const float3& rhs) const { return float3(y * rhs.z - z * rhs.y, z * rhs.x - x * rhs.z, x * rhs.y - y * rhs.x); }
+		constexpr float LengthSq() const { return Dot(*this); }
+		float Length() const { return ::sqrt(LengthSq()); }
+		void Normalize() { *this /= Length(); }
+		float3 ComputeNormalized() const { float3 result = *this; result.Normalize(); return result; }
+		void SetPoint(const float2& position) { x = position.x; y = position.y; z = 0; }
 		union { struct { float x; float y; float z; }; float f[3]; };
 	};
 	using f32v3 = float3;
@@ -274,12 +274,12 @@ namespace SimpleRenderer
 		float4& operator-=(const float4& rhs) { *this = (*this - rhs); return *this; }
 		float4& operator*=(const float s) { *this = (*this * s); return *this; }
 		float4& operator/=(const float s) { *this = (*this / s); return *this; }
-		constexpr float dot(const float4& rhs) const { return x * rhs.x + y * rhs.y + z * rhs.z + w * rhs.w; }
-		constexpr float length_sq() const { return dot(*this); }
-		float length() const { return ::sqrt(length_sq()); }
-		void normalize() { *this /= length(); }
-		float4 compute_normalized() const { float4 result = *this; result.normalize(); return result; }
-		void set_point(const float2& position) { x = position.x; y = position.y; z = 0; w = 1; }
+		constexpr float Dot(const float4& rhs) const { return x * rhs.x + y * rhs.y + z * rhs.z + w * rhs.w; }
+		constexpr float LengthSq() const { return Dot(*this); }
+		float Length() const { return ::sqrt(LengthSq()); }
+		void Normalize() { *this /= Length(); }
+		float4 ComputeNormalized() const { float4 result = *this; result.Normalize(); return result; }
+		void SetPoint(const float2& position) { x = position.x; y = position.y; z = 0; w = 1; }
 		union { struct { float x; float y; float z; float w; }; float f[4]; };
 	};
 	using f32v4 = float4;
@@ -301,22 +301,22 @@ namespace SimpleRenderer
 			w = w_;
 			return *this;
 		}
-		float4 rotate(const float4& v) const noexcept
+		float4 Rotate(const float4& v) const noexcept
 		{
 			quaternion q = *this;
 			q *= quaternion(v.x, v.y, v.z, 0);
-			q *= quaternion::conjugate(*this);
+			q *= quaternion::Conjugate(*this);
 			return float4(q.x, q.y, q.z, v.w);
 		}
-		static quaternion make_from_axis_angle(float3 axis, const float angle) noexcept
+		static quaternion MakeByAxisAngle(float3 axis, const float angle) noexcept
 		{
-			axis.normalize();
+			axis.Normalize();
 			const float half_angle = angle * 0.5f;
 			const float cos_half = ::cos(half_angle);
 			const float sin_half = ::sin(half_angle);
 			return quaternion(sin_half * axis.x, sin_half * axis.y, sin_half * axis.z, cos_half);
 		}
-		void get_axis_angle(float3& axis, float& angle) const noexcept
+		void GetAxisAngle(float3& axis, float& angle) const noexcept
 		{
 			angle = ::acos(w) * 2.0f;
 
@@ -340,7 +340,7 @@ namespace SimpleRenderer
 				axis[2] /= norm;
 			}
 		}
-		static quaternion conjugate(const quaternion& q) noexcept { return quaternion(-q.x, -q.y, -q.z, q.w); }
+		static quaternion Conjugate(const quaternion& q) noexcept { return quaternion(-q.x, -q.y, -q.z, q.w); }
 		float x; float y; float z; float w;
 	};
 
@@ -349,23 +349,23 @@ namespace SimpleRenderer
 		constexpr float2x2() : float2x2(1, 0, 0, 1) { __noop; }
 		constexpr float2x2(float _11_, float _12_, float _21_, float _22_) : _m{ _11_, _12_, _21_, _22_ } { __noop; }
 		constexpr float2x2(const float(&m)[4]) : _m{ m[0],m[1],m[2],m[3] } { __noop; }
-		void set(float _11_, float _12_, float _21_, float _22_)
+		void Set(float _11_, float _12_, float _21_, float _22_)
 		{
 			_11 = _11_; _12 = _12_; _21 = _21_; _22 = _22_;
 		}
-		void make_identity()
+		void MakeIdentity()
 		{
-			set(1.0f, 0.0f, 0.0f, 1.0f);
+			Set(1.0f, 0.0f, 0.0f, 1.0f);
 		}
-		void make_zero()
+		void MakeZero()
 		{
-			set(0.0f, 0.0f, 0.0f, 0.0f);
+			Set(0.0f, 0.0f, 0.0f, 0.0f);
 		}
-		void make_rotationMatrix(const float theta)
+		void MakeRotationMatrix(const float theta)
 		{
 			const float cosTheta = ::cos(theta);
 			const float sinTheta = ::sin(theta);
-			set(cosTheta, sinTheta, -sinTheta, cosTheta);
+			Set(cosTheta, sinTheta, -sinTheta, cosTheta);
 		}
 		float2 operator*(const float2& rhs) const
 		{
@@ -387,30 +387,30 @@ namespace SimpleRenderer
 		constexpr float4x4(const float4(&rows)[4]) : _rows{ rows[0], rows[1], rows[2], rows[3] } { __noop; }
 		constexpr float4x4(float _11_, float _12_, float _13_, float _14_, float _21_, float _22_, float _23_, float _24_, float _31_, float _32_, float _33_, float _34_, float _41_, float _42_, float _43_, float _44_) : _m{ _11_, _12_, _13_, _14_, _21_, _22_, _23_, _24_, _31_, _32_, _33_, _34_, _41_, _42_, _43_, _44_ } { __noop; }
 		constexpr float4x4(const float(&m)[16]) : _m{ m[0],m[1],m[2],m[3],m[4],m[5],m[6],m[7],m[8],m[9],m[10],m[11],m[12],m[13],m[14],m[15] } { __noop; }
-		void set(float _11_, float _12_, float _13_, float _14_, float _21_, float _22_, float _23_, float _24_, float _31_, float _32_, float _33_, float _34_, float _41_, float _42_, float _43_, float _44_)
+		void Set(float _11_, float _12_, float _13_, float _14_, float _21_, float _22_, float _23_, float _24_, float _31_, float _32_, float _33_, float _34_, float _41_, float _42_, float _43_, float _44_)
 		{
 			_11 = _11_; _12 = _12_; _13 = _13_; _14 = _14_; _21 = _21_; _22 = _22_; _23 = _23_; _24 = _24_; _31 = _31_; _32 = _32_; _33 = _33_; _34 = _34_; _41 = _41_; _42 = _42_; _43 = _43_; _44 = _44_;
 		}
-		void make_identity()
+		void MakeIdentity()
 		{
 			_11 = 1; _12 = 0; _13 = 0; _14 = 0; _21 = 0; _22 = 1; _23 = 0; _24 = 0; _31 = 0; _32 = 0; _33 = 1; _34 = 0; _41 = 0; _42 = 0; _43 = 0; _44 = 1;
 		}
-		void make_zero()
+		void MakeZero()
 		{
 			_11 = 0; _12 = 0; _13 = 0; _14 = 0; _21 = 0; _22 = 0; _23 = 0; _24 = 0; _31 = 0; _32 = 0; _33 = 0; _34 = 0; _41 = 0; _42 = 0; _43 = 0; _44 = 0;
 		}
-		void make_pixel_coordinates_projection_matrix(const uint2& screenSize)
+		void MakePixelCoordsProjectionMatrix(const uint2& screenSize)
 		{
-			make_identity();
+			MakeIdentity();
 			_11 = 2.0f / static_cast<float>(screenSize.x); _14 = -1.0f; _22 = -2.0f / static_cast<float>(screenSize.y); _24 = 1.0f;
 		}
-		void make_perspective_projection_matrix(const float FOVAngle, const float nearDepthAbs, const float farDepthAbs, const float screenWidthOverHeight)
+		void MakePerspectiveProjectionMatrix(const float FOVAngle, const float nearDepthAbs, const float farDepthAbs, const float screenWidthOverHeight)
 		{
-			make_zero();
+			MakeZero();
 			bool isRightHanded = true;
 			const float halfFOVAngle = FOVAngle * 0.5f;
-			const float a = 1.0f / (tanf(halfFOVAngle) * screenWidthOverHeight);
-			const float b = 1.0f / (tanf(halfFOVAngle));
+			const float a = 1.0f / (::tanf(halfFOVAngle) * screenWidthOverHeight);
+			const float b = 1.0f / (::tanf(halfFOVAngle));
 			const float c = (farDepthAbs / (nearDepthAbs - farDepthAbs)) * (isRightHanded ? +1.0f : -1.0f);
 			const float d = (farDepthAbs * nearDepthAbs) / (nearDepthAbs - farDepthAbs);
 			const float e = (isRightHanded ? -1.0f : +1.0f);
@@ -420,28 +420,28 @@ namespace SimpleRenderer
 			_34 = d;
 			_43 = e;
 		}
-		void pre_translate(const float x, const float y, const float z) noexcept
+		void PreTranslate(const float x, const float y, const float z) noexcept
 		{
 			_14 += x; _24 += y; _34 += z;
 		}
-		void post_scale(const float x, const float y, const float z) noexcept
+		void PostScale(const float x, const float y, const float z) noexcept
 		{
 			_11 *= x; _12 *= y; _13 *= z;
 			_21 *= x; _22 *= y; _23 *= z;
 			_31 *= x; _32 *= y; _33 *= z;
 			_41 *= x; _42 *= y; _43 *= z;
 		}
-		static float4x4 create_rotation_matrix(const quaternion& q)
+		static float4x4 CreateRotationMatrix(const quaternion& q)
 		{
 			float3 axis;
 			float angle;
-			q.get_axis_angle(axis, angle);
-			return create_rotation_matrix(axis, angle);
+			q.GetAxisAngle(axis, angle);
+			return CreateRotationMatrix(axis, angle);
 		}
-		static float4x4 create_rotation_matrix(const float3& axis, const float angle)
+		static float4x4 CreateRotationMatrix(const float3& axis, const float angle)
 		{
 			// (v * r)r(1 - cosθ) + vcosθ + (r X v)sinθ
-			const float3 r = axis.compute_normalized();
+			const float3 r = axis.ComputeNormalized();
 			const float c = ::cosf(angle);
 			const float s = ::sinf(angle);
 			const float rx = r.x;
@@ -478,7 +478,7 @@ namespace SimpleRenderer
 			SR_ASSERT(_scale.x == _scale.y, "Shear is not supported for Transform2D!!!");
 
 			float2x2 rotationMatrix;
-			rotationMatrix.make_rotationMatrix(_rotation);
+			rotationMatrix.MakeRotationMatrix(_rotation);
 
 			float2 t = rotationMatrix * rhs._translation;
 			_translation += (rotationMatrix * rhs._translation) * _scale;
@@ -487,7 +487,7 @@ namespace SimpleRenderer
 
 			return *this;
 		}
-		static Transform2D interpolate(const Transform2D& a, const Transform2D& b, const float t)
+		static Transform2D Interpolate(const Transform2D& a, const Transform2D& b, const float t)
 		{
 			const float factorA = (1.0f - t);
 			const float factorB = t;
@@ -504,17 +504,17 @@ namespace SimpleRenderer
 
 	struct Transform
 	{
-		float4x4 create_float4x4() const
+		float4x4 CreateFloat4x4() const
 		{
 			// SRT matrix for column vector is like below:
 			// SRT = T * R * S
 			// which is the same as below..
-			float4x4 matrix = float4x4::create_rotation_matrix(_rotation);
-			matrix.pre_translate(_translation.x, _translation.y, _translation.z);
-			matrix.post_scale(_scale.x, _scale.y, _scale.z);
+			float4x4 matrix = float4x4::CreateRotationMatrix(_rotation);
+			matrix.PreTranslate(_translation.x, _translation.y, _translation.z);
+			matrix.PostScale(_scale.x, _scale.y, _scale.z);
 			return matrix;
 		}
-		void make_from_float4x4(const float4x4 m) noexcept
+		void MakeByFloat4x4(const float4x4 m) noexcept
 		{
 			// SRT Matrix
 			// 
@@ -645,8 +645,8 @@ namespace SimpleRenderer
 	class FontData
 	{
 	public:
-		void push_glyph(const FontGlyphMeta& glyphMeta);
-		const FontGlyphMeta& get_GlyphMeta(const byte& ch) const;
+		void PushGlyph(const FontGlyphMeta& glyphMeta);
+		const FontGlyphMeta& GetGlyphMeta(const byte& ch) const;
 
 	private:
 		vector<FontGlyphMeta> _glyphMetas;
@@ -660,7 +660,7 @@ namespace SimpleRenderer
 		virtual ~ShaderHeaderSet() = default;
 
 	public:
-		void push_shader_header(const String& headerName, const String& headerCode);
+		void PushShaderHeader(const String& headerName, const String& headerCode);
 
 	public:
 		virtual HRESULT WINAPI Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) override final;
@@ -684,7 +684,7 @@ namespace SimpleRenderer
 	};
 
 #if defined(SR_DIRECTX)
-	DXGI_FORMAT DX_getInputFormat(const GraphicsFormat& inputFormat)
+	DXGI_FORMAT DX_ConvertGraphicsFormat(const GraphicsFormat& inputFormat)
 	{
 		static constexpr DXGI_FORMAT kFormats[]
 		{
@@ -700,7 +700,7 @@ namespace SimpleRenderer
 		return kFormats[static_cast<size_t>(inputFormat)];
 	}
 
-	DXGI_FORMAT DX_getTextureFormat(const TextureFormat& format)
+	DXGI_FORMAT DX_ConvertTextureFormat(const TextureFormat& format)
 	{
 		switch (format)
 		{
@@ -726,13 +726,13 @@ namespace SimpleRenderer
 	struct ShaderInputElement
 	{
 	public:
-		static ShaderInputElement create_InputElement_float4(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32G32B32A32_FLOAT, semanticName, semanticIndex); }
-		static ShaderInputElement create_InputElement_float3(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32G32B32_FLOAT, semanticName, semanticIndex); }
-		static ShaderInputElement create_InputElement_float2(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32G32_FLOAT, semanticName, semanticIndex); }
-		static ShaderInputElement create_InputElement_float(const char* const semanticName, const uint32 semanticIndex) { return __create_InputElement_common(GraphicsFormat::R32_FLOAT, semanticName, semanticIndex); }
+		static ShaderInputElement CreateInputelement_float4(const char* const semanticName, const uint32 semanticIndex) { return __CreateInputelementCommon(GraphicsFormat::R32G32B32A32_FLOAT, semanticName, semanticIndex); }
+		static ShaderInputElement CreateInputelement_float3(const char* const semanticName, const uint32 semanticIndex) { return __CreateInputelementCommon(GraphicsFormat::R32G32B32_FLOAT, semanticName, semanticIndex); }
+		static ShaderInputElement CreateInputelement_float2(const char* const semanticName, const uint32 semanticIndex) { return __CreateInputelementCommon(GraphicsFormat::R32G32_FLOAT, semanticName, semanticIndex); }
+		static ShaderInputElement CreateInputelement_float(const char* const semanticName, const uint32 semanticIndex) { return __CreateInputelementCommon(GraphicsFormat::R32_FLOAT, semanticName, semanticIndex); }
 
 	private:
-		static ShaderInputElement __create_InputElement_common(const GraphicsFormat format, const char* const semanticName, const uint32 semanticIndex)
+		static ShaderInputElement __CreateInputelementCommon(const GraphicsFormat format, const char* const semanticName, const uint32 semanticIndex)
 		{
 			ShaderInputElement shaderInputElement;
 			shaderInputElement._format = format;
@@ -759,7 +759,7 @@ namespace SimpleRenderer
 		~ShaderInputLayout() = default;
 
 	private:
-		static uint32 compute_InputElement_byte_size(const ShaderInputElement& shaderInputElement)
+		static uint32 ComputeInputElementByteSize(const ShaderInputElement& shaderInputElement)
 		{
 			switch (shaderInputElement._format)
 			{
@@ -779,7 +779,7 @@ namespace SimpleRenderer
 		}
 
 #if defined(SR_DIRECTX)
-		static D3D11_INPUT_CLASSIFICATION DX_getInputSlotClass(const ShaderInputSlotClass& inputSlotClass)
+		static D3D11_INPUT_CLASSIFICATION DX_ConvertInputSlotClass(const ShaderInputSlotClass& inputSlotClass)
 		{
 			static constexpr D3D11_INPUT_CLASSIFICATION kSlotClasses[]
 			{
@@ -827,7 +827,7 @@ namespace SimpleRenderer
 		~Resource() = default;
 
 	private:
-		static uint32 __compute_element_stride(const TextureFormat& format);
+		static uint32 __ComputeElementStride(const TextureFormat& format);
 
 	public:
 		ResourceType _type;
@@ -848,7 +848,7 @@ namespace SimpleRenderer
 	class MeshGenerator
 	{
 	public:
-		static void push_3D_triangle(const Color& color, const float4& a, const float4& b, const float4& c, vector<Vertex>& vertices, vector<uint32>& indices)
+		static void Push3DTriangle(const Color& color, const float4& a, const float4& b, const float4& c, vector<Vertex>& vertices, vector<uint32>& indices)
 		{
 			const uint64 vertexBase = vertices.size();
 			vertices.resize(vertexBase + 3);
@@ -863,12 +863,12 @@ namespace SimpleRenderer
 			vertices[vertexBase + 2]._position = c;
 			vertices[vertexBase + 2]._color = color;
 
-			push_index(indices, vertexBase + 0);
-			push_index(indices, vertexBase + 1);
-			push_index(indices, vertexBase + 2);
+			PushIndex(indices, vertexBase + 0);
+			PushIndex(indices, vertexBase + 1);
+			PushIndex(indices, vertexBase + 2);
 		}
 
-		static void push_2D_triangle(const Color& color, const float2& a, const float2& b, const float2& c, vector<Vertex>& vertices, vector<uint32>& indices)
+		static void Push2DTriangle(const Color& color, const float2& a, const float2& b, const float2& c, vector<Vertex>& vertices, vector<uint32>& indices)
 		{
 			const uint64 vertexBase = vertices.size();
 			vertices.resize(vertexBase + 3);
@@ -883,12 +883,12 @@ namespace SimpleRenderer
 			vertices[vertexBase + 2]._position = float4(c.x, c.y, 0, 1);
 			vertices[vertexBase + 2]._color = color;
 
-			push_index(indices, vertexBase + 0);
-			push_index(indices, vertexBase + 1);
-			push_index(indices, vertexBase + 2);
+			PushIndex(indices, vertexBase + 0);
+			PushIndex(indices, vertexBase + 1);
+			PushIndex(indices, vertexBase + 2);
 		}
 
-		static void push_2D_rectangle(const Color& color, const float2& size, const float2& centerPosition, const float rotationAngle, vector<Vertex>& vertices, vector<uint32>& indices)
+		static void Push2DRectangle(const Color& color, const float2& size, const float2& centerPosition, const float rotationAngle, vector<Vertex>& vertices, vector<uint32>& indices)
 		{
 			const uint64 vertexBase = vertices.size();
 			vertices.resize(vertexBase + 4);
@@ -901,25 +901,25 @@ namespace SimpleRenderer
 			const float sinTheta = ::sin(rotationAngle);
 			const float2 rotatedX = float2(+cosTheta, -sinTheta);
 			const float2 rotatedY = float2(+sinTheta, +cosTheta);
-			vertices[vertexBase + 0]._position.set_point(centerPosition - rotatedX * halfSize.x - rotatedY * halfSize.y);
+			vertices[vertexBase + 0]._position.SetPoint(centerPosition - rotatedX * halfSize.x - rotatedY * halfSize.y);
 			vertices[vertexBase + 0]._color = color;
-			vertices[vertexBase + 1]._position.set_point(centerPosition - rotatedX * halfSize.x + rotatedY * halfSize.y);
+			vertices[vertexBase + 1]._position.SetPoint(centerPosition - rotatedX * halfSize.x + rotatedY * halfSize.y);
 			vertices[vertexBase + 1]._color = color;
-			vertices[vertexBase + 2]._position.set_point(centerPosition + rotatedX * halfSize.x + rotatedY * halfSize.y);
+			vertices[vertexBase + 2]._position.SetPoint(centerPosition + rotatedX * halfSize.x + rotatedY * halfSize.y);
 			vertices[vertexBase + 2]._color = color;
-			vertices[vertexBase + 3]._position.set_point(centerPosition + rotatedX * halfSize.x - rotatedY * halfSize.y);
+			vertices[vertexBase + 3]._position.SetPoint(centerPosition + rotatedX * halfSize.x - rotatedY * halfSize.y);
 			vertices[vertexBase + 3]._color = color;
 
-			push_index(indices, vertexBase + 0);
-			push_index(indices, vertexBase + 1);
-			push_index(indices, vertexBase + 2);
+			PushIndex(indices, vertexBase + 0);
+			PushIndex(indices, vertexBase + 1);
+			PushIndex(indices, vertexBase + 2);
 
-			push_index(indices, vertexBase + 0);
-			push_index(indices, vertexBase + 2);
-			push_index(indices, vertexBase + 3);
+			PushIndex(indices, vertexBase + 0);
+			PushIndex(indices, vertexBase + 2);
+			PushIndex(indices, vertexBase + 3);
 		}
 
-		static void push_2D_circle(const Color& color, const float2& centerPosition, float radius, uint32 sideCount, vector<Vertex>& vertices, vector<uint32>& indices)
+		static void Push2DCircle(const Color& color, const float2& centerPosition, float radius, uint32 sideCount, vector<Vertex>& vertices, vector<uint32>& indices)
 		{
 			radius = max(radius, 1.0f);
 			sideCount = max(sideCount, 4);
@@ -939,19 +939,19 @@ namespace SimpleRenderer
 				vertices[vertexBase + sideIndex + 1]._position = float4(centerPosition.x + x, centerPosition.y + y, 0, 1);
 				vertices[vertexBase + sideIndex + 1]._color = color;
 
-				push_index(indices, vertexBase + 0);
-				push_index(indices, vertexBase + sideIndex + 1);
-				push_index(indices, vertexBase + sideIndex + 2);
+				PushIndex(indices, vertexBase + 0);
+				PushIndex(indices, vertexBase + sideIndex + 1);
+				PushIndex(indices, vertexBase + sideIndex + 2);
 			}
 			indices[indices.size() - 1] = static_cast<uint32>(vertexBase + 1);
 		}
 
-		static void push_2D_lineSegment(const Color& color, const float2& a, const float2& b, float thickness, vector<Vertex>& vertices, vector<uint32>& indices)
+		static void Push2DLineSegment(const Color& color, const float2& a, const float2& b, float thickness, vector<Vertex>& vertices, vector<uint32>& indices)
 		{
 			thickness = max(thickness, 1.0f);
 
 			const float2 ab = b - a;
-			const float l = ab.length();
+			const float l = ab.Length();
 			if (l == 0.0f)
 			{
 				return;
@@ -960,15 +960,15 @@ namespace SimpleRenderer
 			const float2 direction = ab / l;
 			const float rotationAngle = ::atan2f(-direction.y, direction.x);
 			const float2 m = (a + b) * 0.5f;
-			push_2D_rectangle(color, float2(l, thickness), m, rotationAngle, vertices, indices);
+			Push2DRectangle(color, float2(l, thickness), m, rotationAngle, vertices, indices);
 		}
 
-		static void push_2D_arrow(const Color& color, const float2& a, const float2& b, float thickness, float head_length_ratio, float head_width_scale, vector<Vertex>& vertices, vector<uint32>& indices)
+		static void Push2DArrow(const Color& color, const float2& a, const float2& b, float thickness, float head_length_ratio, float head_width_scale, vector<Vertex>& vertices, vector<uint32>& indices)
 		{
 			thickness = max(thickness, 1.0f);
 
 			const float2 ab = b - a;
-			const float l = ab.length();
+			const float l = ab.Length();
 			if (l == 0.0f)
 			{
 				return;
@@ -977,18 +977,18 @@ namespace SimpleRenderer
 			const float2 direction = ab / l;
 			const float rotationAngle = ::atan2f(-direction.y, direction.x);
 			const float2 m = (a + b) * 0.5f;
-			push_2D_rectangle(color, float2(l, thickness), m, rotationAngle, vertices, indices);
+			Push2DRectangle(color, float2(l, thickness), m, rotationAngle, vertices, indices);
 
 			const float2 head_base = a + direction * l * (1.0f - head_length_ratio);
-			const quaternion rotation = quaternion::make_from_axis_angle(float3(0, 0, -1), kPi * 0.5f);
-			const float2 head_left_direction = rotation.rotate(direction);
+			const quaternion rotation = quaternion::MakeByAxisAngle(float3(0, 0, -1), kPi * 0.5f);
+			const float2 head_left_direction = rotation.Rotate(direction);
 			const float2 head_left = head_base + head_left_direction * thickness * head_width_scale;
 			const float2 head_right = head_base - head_left_direction * thickness * head_width_scale;
 			const float2& head_top = b;
-			push_2D_triangle(color, head_right, head_top, head_left, vertices, indices);
+			Push2DTriangle(color, head_right, head_top, head_left, vertices, indices);
 		}
 
-		static void fill_vertex_color(vector<Vertex>& vertices, const Color& color)
+		static void FillVertexColor(vector<Vertex>& vertices, const Color& color)
 		{
 			for (auto& vertex : vertices)
 			{
@@ -996,7 +996,7 @@ namespace SimpleRenderer
 			}
 		}
 
-		static void fill_vertex_color(const size_t vertexOffset, vector<Vertex>& vertices, const Color& color)
+		static void FillVertexColor(const size_t vertexOffset, vector<Vertex>& vertices, const Color& color)
 		{
 			for (size_t i = vertexOffset; i < vertices.size(); i++)
 			{
@@ -1005,7 +1005,7 @@ namespace SimpleRenderer
 		}
 
 	private:
-		static void push_index(vector<uint32>& indices, const uint64 index)
+		static void PushIndex(vector<uint32>& indices, const uint64 index)
 		{
 			indices.push_back(static_cast<uint32>(index));
 		}
@@ -1035,13 +1035,13 @@ namespace SimpleRenderer
 		};
 		struct MouseState
 		{
-			void clear()
+			void ClearMouseState()
 			{
 				_is_L_button_pressed = false;
 				_is_L_button_released = false;
 				_is_R_button_released = false;
 			}
-			void update_position(const MSG& msg)
+			void UpdatePosition(const MSG& msg)
 			{
 				_position.x = static_cast<float>(GET_X_LPARAM(msg.lParam));
 				_position.y = static_cast<float>(GET_Y_LPARAM(msg.lParam));
@@ -1056,7 +1056,7 @@ namespace SimpleRenderer
 		};
 		struct KeyboardState
 		{
-			void clear()
+			void ClearKeyboardState()
 			{
 				_char = 0;
 				_up_key = Key::NONE;
@@ -1070,15 +1070,15 @@ namespace SimpleRenderer
 		~Window() = default;
 
 	public:
-		bool create(const CreateDesc& createDesc);
-		void destroy();
-		int32 processMessages();
+		bool Create(const CreateDesc& createDesc);
+		void Destroy();
+		int32 ProcessMessages();
 
 	public:
-		const uint2& get_size() const { return _windowSize; }
-		uint64 get_window_handle() const { return _windowHandle; }
-		const MouseState& get_mouse_state() const { return _mouseState; }
-		const KeyboardState& get_keyboard_state() const { return _keyboardState; }
+		const uint2& GetSize() const { return _windowSize; }
+		uint64 GetWindowHandle() const { return _windowHandle; }
+		const MouseState& GetMouseState() const { return _mouseState; }
+		const KeyboardState& GetKeyboardState() const { return _keyboardState; }
 
 	private:
 		uint64 _instanceHandle = 0;
@@ -1097,28 +1097,28 @@ namespace SimpleRenderer
 		~RenderDevice() = default;
 
 	public:
-		bool create_device(const Window& window);
-		void destroy_device() {}
+		bool CreateDevice(const Window& window);
+		void DestroyDevice() {}
 
 	public:
-		bool create_ShaderInputLayout(const Shader& vertexShader, const vector<ShaderInputElement>& shaderInputElements, ShaderInputLayout& shaderInputLayout);
-		bool create_Shader(const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet, Shader& shader);
-		bool create_texture2D(const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height, Resource& resource);
-		bool create_buffer(const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount, Resource& resource);
-		bool update_resource(const void* const content, const uint32 elementStride, const uint32 elementCount, Resource& resource);
+		bool CreateShaderInputLayout(const Shader& vertexShader, const vector<ShaderInputElement>& shaderInputElements, ShaderInputLayout& shaderInputLayout);
+		bool CreateShader(const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet, Shader& shader);
+		bool CreateTexture2D(const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height, Resource& resource);
+		bool CreateBuffer(const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount, Resource& resource);
+		bool UpdateShaderResource(const void* const content, const uint32 elementStride, const uint32 elementCount, Resource& resource);
 
 	public:
-		void bind_ShaderInputLayout(ShaderInputLayout& shaderInputLayout);
-		void bind_Shader(Shader& shader);
-		void bind_input(Resource& resource, const uint32 slot);
-		void bind_ShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot);
-		void use_triangle_primitive();
+		void BindShaderInputLayout(ShaderInputLayout& shaderInputLayout);
+		void BindShader(Shader& shader);
+		void BindInput(Resource& resource, const uint32 slot);
+		void BindShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot);
+		void UseTrianglePrimitive();
 
 	public:
-		void begin_rendering(const Color& clearColor);
-		void draw(const uint32 vertexCount);
-		void draw_indexed(const uint32 indexCount);
-		void end_rendering();
+		void BeginRendering(const Color& clearColor);
+		void Draw(const uint32 vertexCount);
+		void DrawIndexed(const uint32 indexCount);
+		void EndRendering();
 
 	private:
 #if defined(SR_DIRECTX)
@@ -1145,33 +1145,31 @@ namespace SimpleRenderer
 	class App final
 	{
 	public:
-		App(Window& window, const Color& clearColor) : _window{ window }, _clearColor{ clearColor } { _renderDevice.create_device(_window); create_default_FontData(); }
+		App(Window& window, const Color& clearColor) : _window{ window }, _clearColor{ clearColor } { _renderDevice.CreateDevice(_window); CreateDefaultFontData(); }
 		~App() = default;
 
 	public:
-		bool is_running();
+		bool IsRunning();
 
 	public:
-		void begin_rendering();
-		void draw(const uint32 vertexCount);
-		void draw_indexed(const uint32 indexCount);
-		void draw_text(const Color& color, const String& text, const float2& position);
-		void end_rendering();
-
+		void BeginRendering();
+		void Draw(const uint32 vertexCount);
+		void DrawIndexed(const uint32 indexCount);
+		void DrawTextAt(const Color& color, const String& text, const float2& position);
+		void EndRendering();
 	public:
-		bool is_mouse_L_button_down() const { return _window.get_mouse_state()._is_L_button_down; }
-		bool is_mouse_L_button_pressed() const { return _window.get_mouse_state()._is_L_button_pressed; }
-		bool is_mouse_L_button_released() const { return _window.get_mouse_state()._is_L_button_released; }
-		bool is_mouse_R_button_released() const { return _window.get_mouse_state()._is_R_button_released; }
-		float2 get_mouse_move_delta() const { return _window.get_mouse_state()._position - _window.get_mouse_state()._L_pressed_position; }
-		char get_keyboard_char() const { return _window.get_keyboard_state()._char; }
-		Window::Key get_keyboard_up_key() const { return _window.get_keyboard_state()._up_key; }
-		RenderDevice& get_RenderDevice() { return _renderDevice; }
-
+		bool IsMouseLButtonDown() const { return _window.GetMouseState()._is_L_button_down; }
+		bool IsMouseLButtonPressed() const { return _window.GetMouseState()._is_L_button_pressed; }
+		bool IsMouseLButtonReleased() const { return _window.GetMouseState()._is_L_button_released; }
+		bool IsMouseRButtonReleased() const { return _window.GetMouseState()._is_R_button_released; }
+		float2 GetMouseMoveDelta() const { return _window.GetMouseState()._position - _window.GetMouseState()._L_pressed_position; }
+		char GetKeyboardChar() const { return _window.GetKeyboardState()._char; }
+		Window::Key GetKeyboardUpKey() const { return _window.GetKeyboardState()._up_key; }
+		RenderDevice& GetRenderDevice() { return _renderDevice; }
 	private:
-		void create_default_FontData();
-		void create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow]);
-		void bind_default_FontData();
+		void CreateDefaultFontData();
+		void CreateDefaultFontDataPushGlyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow]);
+		void BindDefaultFontData();
 
 	private:
 		Window& _window;
@@ -1197,7 +1195,7 @@ namespace SimpleRenderer
 
 
 #pragma region Function Definitions
-	void FontData::push_glyph(const FontGlyphMeta& glyphMeta)
+	void FontData::PushGlyph(const FontGlyphMeta& glyphMeta)
 	{
 		auto found = _glyphMap.find(glyphMeta._ch);
 		if (found != _glyphMap.end())
@@ -1209,7 +1207,7 @@ namespace SimpleRenderer
 		_glyphMap.insert(Pair<byte, uint64>(glyphMeta._ch, _glyphMetas.size() - 1));
 	}
 
-	const FontGlyphMeta& FontData::get_GlyphMeta(const byte& ch) const
+	const FontGlyphMeta& FontData::GetGlyphMeta(const byte& ch) const
 	{
 		auto found = _glyphMap.find(ch);
 		if (found == _glyphMap.end())
@@ -1219,7 +1217,7 @@ namespace SimpleRenderer
 		return _glyphMetas[found->second];
 	}
 
-	void ShaderHeaderSet::push_shader_header(const String& headerName, const String& headerCode)
+	void ShaderHeaderSet::PushShaderHeader(const String& headerName, const String& headerCode)
 	{
 		_headerNames.push_back(headerName);
 		_headerCodes.push_back(headerCode);
@@ -1240,7 +1238,7 @@ namespace SimpleRenderer
 		return E_FAIL;
 	}
 
-	uint32 Resource::__compute_element_stride(const TextureFormat& format)
+	uint32 Resource::__ComputeElementStride(const TextureFormat& format)
 	{
 		switch (format)
 		{
@@ -1268,7 +1266,7 @@ namespace SimpleRenderer
 	}
 #endif // defined(SR_WINDOWS)
 
-	bool Window::create(const Window::CreateDesc& createDesc)
+	bool Window::Create(const Window::CreateDesc& createDesc)
 	{
 #if defined(SR_WINDOWS)
 		const HINSTANCE typedInstanceHandle = ::GetModuleHandle(nullptr);
@@ -1299,7 +1297,7 @@ namespace SimpleRenderer
 #endif // defined(SR_WINDOWS)
 	}
 
-	void Window::destroy()
+	void Window::Destroy()
 	{
 #if defined(SR_WINDOWS)
 		if (_windowHandle == 0) { return; }
@@ -1309,10 +1307,10 @@ namespace SimpleRenderer
 #endif // defined(SR_WINDOWS)
 	}
 
-	int32 Window::processMessages()
+	int32 Window::ProcessMessages()
 	{
-		_keyboardState.clear();
-		_mouseState.clear();
+		_keyboardState.ClearKeyboardState();
+		_mouseState.ClearMouseState();
 #if defined(SR_WINDOWS)
 		MSG msg{};
 		if (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) == false) { return true; }
@@ -1331,14 +1329,14 @@ namespace SimpleRenderer
 			break;
 		case WM_MOUSEMOVE:
 		{
-			_mouseState.update_position(msg);
+			_mouseState.UpdatePosition(msg);
 			break;
 		}
 		case WM_LBUTTONDOWN:
 		{
 			_mouseState._is_L_button_pressed = true;
 			_mouseState._is_L_button_down = true;
-			_mouseState.update_position(msg);
+			_mouseState.UpdatePosition(msg);
 			_mouseState._L_pressed_position = _mouseState._position;
 			break;
 		}
@@ -1346,13 +1344,13 @@ namespace SimpleRenderer
 		{
 			_mouseState._is_L_button_released = true;
 			_mouseState._is_L_button_down = false;
-			_mouseState.update_position(msg);
+			_mouseState.UpdatePosition(msg);
 			break;
 		}
 		case WM_RBUTTONUP:
 		{
 			_mouseState._is_R_button_released = true;
-			_mouseState.update_position(msg);
+			_mouseState.UpdatePosition(msg);
 			break;
 		}
 		case WM_QUIT:
@@ -1367,21 +1365,21 @@ namespace SimpleRenderer
 		return 0;
 	}
 
-	bool RenderDevice::create_device(const Window& window)
+	bool RenderDevice::CreateDevice(const Window& window)
 	{
 #if defined(SR_DIRECTX)
 		DXGI_SWAP_CHAIN_DESC swapChainDescriptor{};
 		swapChainDescriptor.BufferCount = 1;
 		swapChainDescriptor.BufferDesc.Format = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
-		swapChainDescriptor.BufferDesc.Width = static_cast<UINT>(window.get_size().x);
-		swapChainDescriptor.BufferDesc.Height = static_cast<UINT>(window.get_size().y);
+		swapChainDescriptor.BufferDesc.Width = static_cast<UINT>(window.GetSize().x);
+		swapChainDescriptor.BufferDesc.Height = static_cast<UINT>(window.GetSize().y);
 		swapChainDescriptor.BufferDesc.RefreshRate.Denominator = 1;
 		swapChainDescriptor.BufferDesc.RefreshRate.Numerator = 60;
 		swapChainDescriptor.BufferDesc.Scaling = DXGI_MODE_SCALING::DXGI_MODE_SCALING_UNSPECIFIED;
 		swapChainDescriptor.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER::DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 		swapChainDescriptor.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		swapChainDescriptor.Flags = 0;
-		swapChainDescriptor.OutputWindow = reinterpret_cast<HWND>(window.get_window_handle());
+		swapChainDescriptor.OutputWindow = reinterpret_cast<HWND>(window.GetWindowHandle());
 		swapChainDescriptor.SampleDesc.Count = 1;
 		swapChainDescriptor.SampleDesc.Quality = 0;
 		swapChainDescriptor.SwapEffect = DXGI_SWAP_EFFECT::DXGI_SWAP_EFFECT_DISCARD;
@@ -1402,8 +1400,8 @@ namespace SimpleRenderer
 		}
 
 		D3D11_TEXTURE2D_DESC depthStencilResourceDescriptor{};
-		depthStencilResourceDescriptor.Width = static_cast<UINT>(window.get_size().x);
-		depthStencilResourceDescriptor.Height = static_cast<UINT>(window.get_size().y);
+		depthStencilResourceDescriptor.Width = static_cast<UINT>(window.GetSize().x);
+		depthStencilResourceDescriptor.Height = static_cast<UINT>(window.GetSize().y);
 		depthStencilResourceDescriptor.MipLevels = 1;
 		depthStencilResourceDescriptor.ArraySize = 1;
 		depthStencilResourceDescriptor.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -1455,8 +1453,8 @@ namespace SimpleRenderer
 
 		{
 			D3D11_VIEWPORT viewport{};
-			viewport.Width = static_cast<FLOAT>(window.get_size().x);
-			viewport.Height = static_cast<FLOAT>(window.get_size().y);
+			viewport.Width = static_cast<FLOAT>(window.GetSize().x);
+			viewport.Height = static_cast<FLOAT>(window.GetSize().y);
 			viewport.MinDepth = 0.0f;
 			viewport.MaxDepth = 1.0f;
 			_deviceContext->RSSetViewports(1, &viewport);
@@ -1500,7 +1498,7 @@ namespace SimpleRenderer
 		return false;
 	}
 
-	bool RenderDevice::create_ShaderInputLayout(const Shader& vertexShader, const vector<ShaderInputElement>& shaderInputElements, ShaderInputLayout& shaderInputLayout)
+	bool RenderDevice::CreateShaderInputLayout(const Shader& vertexShader, const vector<ShaderInputElement>& shaderInputElements, ShaderInputLayout& shaderInputLayout)
 	{
 		if (shaderInputElements.empty())
 		{
@@ -1515,15 +1513,15 @@ namespace SimpleRenderer
 		{
 			D3D11_INPUT_ELEMENT_DESC inputElementDesc{};
 			inputElementDesc.AlignedByteOffset = inputTotalByteSize;
-			inputElementDesc.Format = DX_getInputFormat(shaderInputElement._format);
+			inputElementDesc.Format = DX_ConvertGraphicsFormat(shaderInputElement._format);
 			inputElementDesc.InputSlot = shaderInputElement._inputSlot;
-			inputElementDesc.InputSlotClass = ShaderInputLayout::DX_getInputSlotClass(shaderInputElement._inputSlotClass);
+			inputElementDesc.InputSlotClass = ShaderInputLayout::DX_ConvertInputSlotClass(shaderInputElement._inputSlotClass);
 			inputElementDesc.SemanticName = shaderInputElement._semanticName;
 			inputElementDesc.SemanticIndex = shaderInputElement._semanticIndex;
 			inputElementDesc.InstanceDataStepRate = shaderInputElement._instanceStepRate;
 			DX_inputElements.push_back(inputElementDesc);
 
-			inputTotalByteSize += ShaderInputLayout::compute_InputElement_byte_size(shaderInputElement);
+			inputTotalByteSize += ShaderInputLayout::ComputeInputElementByteSize(shaderInputElement);
 		}
 		if (SUCCEEDED(_device->CreateInputLayout(&DX_inputElements[0], static_cast<UINT>(DX_inputElements.size()),
 			vertexShader._shaderBlob->GetBufferPointer(), vertexShader._shaderBlob->GetBufferSize(), shaderInputLayout._inputLayout.ReleaseAndGetAddressOf())))
@@ -1535,7 +1533,7 @@ namespace SimpleRenderer
 		return false;
 	}
 
-	bool RenderDevice::create_Shader(const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet, Shader& shader)
+	bool RenderDevice::CreateShader(const char* sourceCode, const ShaderType& shaderType, const char* shaderIdentifier, const char* entryPoint, const char* target, ShaderHeaderSet* const shaderHeaderSet, Shader& shader)
 	{
 		if (sourceCode == nullptr)
 		{
@@ -1591,7 +1589,7 @@ namespace SimpleRenderer
 #endif // defined(SR_DIRECTX)
 	}
 
-	bool RenderDevice::create_texture2D(const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height, Resource& resource)
+	bool RenderDevice::CreateTexture2D(const TextureFormat& format, const void* const resourceContent, const uint32 width, const uint32 height, Resource& resource)
 	{
 #if defined(SR_DIRECTX)
 		ComPtr<ID3D11Resource> newResource;
@@ -1600,12 +1598,12 @@ namespace SimpleRenderer
 		texture2DDescriptor.Height = height;
 		texture2DDescriptor.MipLevels = 1;
 		texture2DDescriptor.ArraySize = 1;
-		texture2DDescriptor.Format = DX_getTextureFormat(format);
+		texture2DDescriptor.Format = DX_ConvertTextureFormat(format);
 		texture2DDescriptor.SampleDesc.Count = 1;
 		texture2DDescriptor.Usage = D3D11_USAGE::D3D11_USAGE_DEFAULT;
 		texture2DDescriptor.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
 		texture2DDescriptor.CPUAccessFlags = 0;
-		const uint32 elementStride = Resource::__compute_element_stride(format);
+		const uint32 elementStride = Resource::__ComputeElementStride(format);
 		D3D11_SUBRESOURCE_DATA subResource{};
 		subResource.pSysMem = resourceContent;
 		subResource.SysMemPitch = texture2DDescriptor.Width * elementStride;
@@ -1627,7 +1625,7 @@ namespace SimpleRenderer
 
 				resource._width = width;
 
-				swap(resource._resource, newResource);
+				Swap(resource._resource, newResource);
 				return true;
 			}
 		}
@@ -1635,11 +1633,11 @@ namespace SimpleRenderer
 		return false;
 	}
 
-	bool RenderDevice::create_buffer(const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount, Resource& resource)
+	bool RenderDevice::CreateBuffer(const ResourceType& type, const void* const content, const uint32 elementStride, const uint32 elementCount, Resource& resource)
 	{
 		if (type == ResourceType::Teture2D)
 		{
-			SR_ASSERT(false, "Use create_texture2D() instead!");
+			SR_ASSERT(false, "Use CreateTexture2D() instead!");
 			return false;
 		}
 
@@ -1661,18 +1659,18 @@ namespace SimpleRenderer
 			resource._elementStride = elementStride;
 			resource._elementMaxCount = elementCount;
 
-			swap(resource._resource, newResource);
+			Swap(resource._resource, newResource);
 			return true;
 		}
 #endif // defined(SR_DIRECTX)
 		return false;
 	}
 
-	bool RenderDevice::update_resource(const void* const content, const uint32 elementStride, const uint32 elementCount, Resource& resource)
+	bool RenderDevice::UpdateShaderResource(const void* const content, const uint32 elementStride, const uint32 elementCount, Resource& resource)
 	{
 		if (elementCount > resource._elementMaxCount)
 		{
-			return create_buffer(resource._type, content, elementStride, elementCount, resource);
+			return CreateBuffer(resource._type, content, elementStride, elementCount, resource);
 		}
 
 #if defined(SR_DIRECTX)
@@ -1694,16 +1692,16 @@ namespace SimpleRenderer
 			}
 			~SafeResourceMapper()
 			{
-				if (isValid() == true)
+				if (IsValid() == true)
 				{
 					_renderDevice._deviceContext->Unmap(_resource, _subresource);
 				}
 			}
-			bool isValid() const noexcept
+			bool IsValid() const noexcept
 			{
 				return _mappedSubresource.pData != nullptr;
 			}
-			void set(const void* const data, const uint32 size) noexcept
+			void Set(const void* const data, const uint32 size) noexcept
 			{
 				::memcpy(_mappedSubresource.pData, data, size);
 			}
@@ -1716,16 +1714,16 @@ namespace SimpleRenderer
 		};
 
 		SafeResourceMapper safeResourceMapper(*this, resource._resource.Get(), 0);
-		if (safeResourceMapper.isValid())
+		if (safeResourceMapper.IsValid())
 		{
-			safeResourceMapper.set(content, elementStride * elementCount);
+			safeResourceMapper.Set(content, elementStride * elementCount);
 			return true;
 		}
 #endif // defined(SR_DIRECTX)
 		return false;
 	}
 
-	void RenderDevice::bind_ShaderInputLayout(ShaderInputLayout& shaderInputLayout)
+	void RenderDevice::BindShaderInputLayout(ShaderInputLayout& shaderInputLayout)
 	{
 		_is_InputLayout_bound = true;
 #if defined(SR_DIRECTX)
@@ -1734,7 +1732,7 @@ namespace SimpleRenderer
 #endif // defined(SR_DIRECTX)
 	}
 
-	void RenderDevice::bind_Shader(Shader& shader)
+	void RenderDevice::BindShader(Shader& shader)
 	{
 		if (shader._type == ShaderType::VertexShader)
 		{
@@ -1752,7 +1750,7 @@ namespace SimpleRenderer
 		}
 	}
 
-	void RenderDevice::bind_input(Resource& resource, const uint32 slot)
+	void RenderDevice::BindInput(Resource& resource, const uint32 slot)
 	{
 		if (resource._type == ResourceType::VertexBuffer)
 		{
@@ -1768,7 +1766,7 @@ namespace SimpleRenderer
 		{
 			_is_IndexBuffer_bound = true;
 #if defined(SR_DIRECTX)
-			_deviceContext->IASetIndexBuffer(static_cast<ID3D11Buffer*>(resource._resource.Get()), DX_getInputFormat(Resource::kIndexBufferFormat), 0);
+			_deviceContext->IASetIndexBuffer(static_cast<ID3D11Buffer*>(resource._resource.Get()), DX_ConvertGraphicsFormat(Resource::kIndexBufferFormat), 0);
 #endif // defined(SR_DIRECTX)
 		}
 		else
@@ -1777,7 +1775,7 @@ namespace SimpleRenderer
 		}
 	}
 
-	void RenderDevice::bind_ShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot)
+	void RenderDevice::BindShaderResource(const ShaderType shaderType, Resource& resource, const uint32 slot)
 	{
 		if (resource._type == ResourceType::ConstantBuffer)
 		{
@@ -1821,23 +1819,23 @@ namespace SimpleRenderer
 		}
 	}
 
-	void RenderDevice::use_triangle_primitive()
+	void RenderDevice::UseTrianglePrimitive()
 	{
 #if defined(SR_DIRECTX)
 		_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 #endif // defined(SR_DIRECTX)
 	}
 
-	void RenderDevice::begin_rendering(const Color& clearColor)
+	void RenderDevice::BeginRendering(const Color& clearColor)
 	{
 #if defined(SR_DIRECTX)
 		_deviceContext->ClearRenderTargetView(_backBufferRtv.Get(), clearColor.f);
 		_deviceContext->ClearDepthStencilView(_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 #endif // defined(SR_DIRECTX)
-		use_triangle_primitive();
+		UseTrianglePrimitive();
 	}
 
-	void RenderDevice::draw_indexed(const uint32 indexCount)
+	void RenderDevice::DrawIndexed(const uint32 indexCount)
 	{
 		if (_is_InputLayout_bound == false)
 		{
@@ -1865,7 +1863,7 @@ namespace SimpleRenderer
 #endif // defined(SR_DIRECTX)
 	}
 
-	void RenderDevice::draw(const uint32 vertexCount)
+	void RenderDevice::Draw(const uint32 vertexCount)
 	{
 		if (_is_VertexBuffer_bound == false)
 		{
@@ -1878,33 +1876,33 @@ namespace SimpleRenderer
 #endif // defined(SR_DIRECTX)
 	}
 
-	void RenderDevice::end_rendering()
+	void RenderDevice::EndRendering()
 	{
 #if defined(SR_DIRECTX)
 		_swapChain->Present(0, 0);
 #endif // defined(SR_DIRECTX)
 	}
 
-	bool App::is_running()
+	bool App::IsRunning()
 	{
-		if (_window.processMessages() < 0)
+		if (_window.ProcessMessages() < 0)
 		{
 			return false;
 		}
 		return true;
 	}
 
-	void App::begin_rendering()
+	void App::BeginRendering()
 	{
-		_renderDevice.begin_rendering(_clearColor);
+		_renderDevice.BeginRendering(_clearColor);
 	}
 
-	void App::draw_indexed(const uint32 indexCount)
+	void App::DrawIndexed(const uint32 indexCount)
 	{
-		_renderDevice.draw_indexed(indexCount);
+		_renderDevice.DrawIndexed(indexCount);
 	}
 
-	void App::draw_text(const Color& color, const String& text, const float2& position)
+	void App::DrawTextAt(const Color& color, const String& text, const float2& position)
 	{
 		if (text.empty() == true)
 		{
@@ -1918,12 +1916,12 @@ namespace SimpleRenderer
 		uint32 chCount = 0;
 		for (const char& ch : text)
 		{
-			const FontGlyphMeta& glyphMeta = _defaultFontData.get_GlyphMeta(ch);
+			const FontGlyphMeta& glyphMeta = _defaultFontData.GetGlyphMeta(ch);
 			const float u0 = glyphMeta._u0;
 			const float u1 = glyphMeta._u1;
 			const float v0 = glyphMeta._v0;
 			const float v1 = glyphMeta._v1;
-			MeshGenerator<FONT_VS_INPUT>::push_2D_rectangle(color, sizeUnit, position + sizeUnit * 0.5f + positionUnit * (float)chCount, 0.0f, _fontVertices, _fontIndices);
+			MeshGenerator<FONT_VS_INPUT>::Push2DRectangle(color, sizeUnit, position + sizeUnit * 0.5f + positionUnit * (float)chCount, 0.0f, _fontVertices, _fontIndices);
 			_fontVertices[_fontVertices.size() - 4]._texcoord = float2(u0, v0);
 			_fontVertices[_fontVertices.size() - 3]._texcoord = float2(u0, v1);
 			_fontVertices[_fontVertices.size() - 2]._texcoord = float2(u1, v1);
@@ -1932,29 +1930,29 @@ namespace SimpleRenderer
 		}
 	}
 
-	void App::draw(const uint32 vertexCount)
+	void App::Draw(const uint32 vertexCount)
 	{
-		_renderDevice.draw(vertexCount);
+		_renderDevice.Draw(vertexCount);
 	}
 
-	void App::end_rendering()
+	void App::EndRendering()
 	{
 		if (_fontVertices.empty() == false)
 		{
-			_renderDevice.update_resource(&_fontVertices[0], sizeof(FONT_VS_INPUT), (uint32)_fontVertices.size(), _fontVertexBuffer);
-			_renderDevice.update_resource(&_fontIndices[0], sizeof(uint32), (uint32)_fontIndices.size(), _fontIndexBuffer);
+			_renderDevice.UpdateShaderResource(&_fontVertices[0], sizeof(FONT_VS_INPUT), (uint32)_fontVertices.size(), _fontVertexBuffer);
+			_renderDevice.UpdateShaderResource(&_fontIndices[0], sizeof(uint32), (uint32)_fontIndices.size(), _fontIndexBuffer);
 
-			bind_default_FontData();
+			BindDefaultFontData();
 
-			draw_indexed((uint32)_fontIndices.size());
+			DrawIndexed((uint32)_fontIndices.size());
 			_fontVertices.clear();
 			_fontIndices.clear();
 		}
 
-		_renderDevice.end_rendering();
+		_renderDevice.EndRendering();
 	}
 
-	void App::create_default_FontData_push_glyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow])
+	void App::CreateDefaultFontDataPushGlyphRow(const uint32 rowIndex, const byte(&ch)[kFontTextureGlyphCountInRow])
 	{
 		const float glyphTextureWidth = (float)kFontTextureGlyphWidth;
 		const float glyphTextureHeight = (float)kFontTextureGlyphHeight;
@@ -1964,28 +1962,28 @@ namespace SimpleRenderer
 		const float v1 = v0 + glyphTextureUnit_V;
 		for (uint32 iter = 0; iter < kFontTextureGlyphCountInRow; ++iter)
 		{
-			_defaultFontData.push_glyph(FontGlyphMeta(ch[iter], glyphTextureUnit_U * iter, v0, glyphTextureUnit_U * (iter + 1), v1));
+			_defaultFontData.PushGlyph(FontGlyphMeta(ch[iter], glyphTextureUnit_U * iter, v0, glyphTextureUnit_U * (iter + 1), v1));
 		}
 	}
 
-	void App::create_default_FontData()
+	void App::CreateDefaultFontData()
 	{
-		_fontShaderHeaderSet.push_shader_header("FontShaderHeader", kFontShaderHeaderCode);
+		_fontShaderHeaderSet.PushShaderHeader("FontShaderHeader", kFontShaderHeaderCode);
 
-		_renderDevice.create_Shader(kFontVertexShaderCode, ShaderType::VertexShader, "FontVertexShader", "main", "vs_5_0", &_fontShaderHeaderSet, _fontVertexShader);
+		_renderDevice.CreateShader(kFontVertexShaderCode, ShaderType::VertexShader, "FontVertexShader", "main", "vs_5_0", &_fontShaderHeaderSet, _fontVertexShader);
 
 		vector<ShaderInputElement> shaderInputElements;
-		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("POSITION", 0));
-		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("COLOR", 0));
-		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float2("TEXCOORD", 0));
-		_renderDevice.create_ShaderInputLayout(_fontVertexShader, shaderInputElements, _fontShaderInputLayout);
+		shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float4("POSITION", 0));
+		shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float4("COLOR", 0));
+		shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float2("TEXCOORD", 0));
+		_renderDevice.CreateShaderInputLayout(_fontVertexShader, shaderInputElements, _fontShaderInputLayout);
 
-		_renderDevice.create_Shader(kFontPixelShaderCode, ShaderType::PixelShader, "FontPixelShader", "main", "ps_5_0", &_fontShaderHeaderSet, _fontPixelShader);
+		_renderDevice.CreateShader(kFontPixelShaderCode, ShaderType::PixelShader, "FontPixelShader", "main", "ps_5_0", &_fontShaderHeaderSet, _fontPixelShader);
 
-		const uint2& screenSize = _window.get_size();
+		const uint2& screenSize = _window.GetSize();
 		FONT_CB_MATRICES font_cb_matrices;
-		font_cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(screenSize);
-		_renderDevice.create_buffer(ResourceType::ConstantBuffer, &font_cb_matrices, sizeof(font_cb_matrices), 1, _fontCBMatrices);
+		font_cb_matrices._projectionMatrix.MakePixelCoordsProjectionMatrix(screenSize);
+		_renderDevice.CreateBuffer(ResourceType::ConstantBuffer, &font_cb_matrices, sizeof(font_cb_matrices), 1, _fontCBMatrices);
 
 		byte bytes[kFontTextureByteCount]{};
 		for (uint32 iter = 0; iter < kFontTextureByteCount; ++iter)
@@ -1995,47 +1993,47 @@ namespace SimpleRenderer
 			const byte byte_ = (kFontTextureRawBitData[byteAt] >> (7 - bitAt)) & 1;
 			bytes[iter] = byte_ * 255;
 		}
-		_renderDevice.create_texture2D(TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight, _fontTexture);
+		_renderDevice.CreateTexture2D(TextureFormat::R8_UNORM, bytes, kFontTextureWidth, kFontTextureHeight, _fontTexture);
 
-		MeshGenerator<FONT_VS_INPUT>::push_2D_rectangle(Color(), float2(512, 480), float2(256, 240), 0.0f, _fontVertices, _fontIndices);
+		MeshGenerator<FONT_VS_INPUT>::Push2DRectangle(Color(), float2(512, 480), float2(256, 240), 0.0f, _fontVertices, _fontIndices);
 		_fontVertices[0]._texcoord = float2(0, 0);
 		_fontVertices[1]._texcoord = float2(1, 0);
 		_fontVertices[2]._texcoord = float2(0, 1);
 		_fontVertices[3]._texcoord = float2(1, 1);
-		_renderDevice.create_buffer(ResourceType::VertexBuffer, &_fontVertices[0], sizeof(FONT_VS_INPUT), (uint32)_fontVertices.size(), _fontVertexBuffer);
-		_renderDevice.create_buffer(ResourceType::IndexBuffer, &_fontIndices[0], sizeof(uint32), (uint32)_fontIndices.size(), _fontIndexBuffer);
+		_renderDevice.CreateBuffer(ResourceType::VertexBuffer, &_fontVertices[0], sizeof(FONT_VS_INPUT), (uint32)_fontVertices.size(), _fontVertexBuffer);
+		_renderDevice.CreateBuffer(ResourceType::IndexBuffer, &_fontIndices[0], sizeof(uint32), (uint32)_fontIndices.size(), _fontIndexBuffer);
 
 		byte row0[kFontTextureGlyphCountInRow]{ ' ','!','\"','$','#','%','&','\'','(',')','*','+',',','-','.','/' };
-		create_default_FontData_push_glyphRow(0, row0);
+		CreateDefaultFontDataPushGlyphRow(0, row0);
 
 		byte row1[kFontTextureGlyphCountInRow]{ '0','1','2','3','4','5','6','7','8','9',':',';','<','=','>','?' };
-		create_default_FontData_push_glyphRow(1, row1);
+		CreateDefaultFontDataPushGlyphRow(1, row1);
 
 		byte row2[kFontTextureGlyphCountInRow]{ '@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O' };
-		create_default_FontData_push_glyphRow(2, row2);
+		CreateDefaultFontDataPushGlyphRow(2, row2);
 
 		byte row3[kFontTextureGlyphCountInRow]{ 'P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_' };
-		create_default_FontData_push_glyphRow(3, row3);
+		CreateDefaultFontDataPushGlyphRow(3, row3);
 
 		byte row4[kFontTextureGlyphCountInRow]{ '`','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o' };
-		create_default_FontData_push_glyphRow(4, row4);
+		CreateDefaultFontDataPushGlyphRow(4, row4);
 
 		byte row5[kFontTextureGlyphCountInRow]{ 'p','q','r','s','t','u','v','w','x','y','z','(','|',')','~', 0 };
-		create_default_FontData_push_glyphRow(5, row5);
+		CreateDefaultFontDataPushGlyphRow(5, row5);
 	}
 
-	void App::bind_default_FontData()
+	void App::BindDefaultFontData()
 	{
-		_renderDevice.bind_Shader(_fontVertexShader);
-		_renderDevice.bind_Shader(_fontPixelShader);
-		_renderDevice.bind_ShaderInputLayout(_fontShaderInputLayout);
-		_renderDevice.bind_ShaderResource(ShaderType::VertexShader, _fontCBMatrices, 0);
-		_renderDevice.bind_ShaderResource(ShaderType::PixelShader, _fontTexture, 0);
-		_renderDevice.bind_input(_fontVertexBuffer, 0);
-		_renderDevice.bind_input(_fontIndexBuffer, 0);
+		_renderDevice.BindShader(_fontVertexShader);
+		_renderDevice.BindShader(_fontPixelShader);
+		_renderDevice.BindShaderInputLayout(_fontShaderInputLayout);
+		_renderDevice.BindShaderResource(ShaderType::VertexShader, _fontCBMatrices, 0);
+		_renderDevice.BindShaderResource(ShaderType::PixelShader, _fontTexture, 0);
+		_renderDevice.BindInput(_fontVertexBuffer, 0);
+		_renderDevice.BindInput(_fontIndexBuffer, 0);
 	}
 
-	bool read_file(const String& file_name, String& out_content)
+	bool ReadFile(const String& file_name, String& out_content)
 	{
 		out_content.clear();
 
@@ -2074,13 +2072,13 @@ namespace SimpleRenderer
 			//String _debug_name;
 			//String _debug_value;
 
-			bool is_valid() const { return _name_length > 0; }
-			String get_name() const { return _XML->_text.substr(_name_at, _name_length); }
-			String get_value() const { return _XML->_text.substr(_value_at, _value_length); }
-			Attribute get_next_attribute() const { return get_node().get_attribute(_index_in_node + 1); }
+			bool IsValid() const { return _name_length > 0; }
+			String GetName() const { return _XML->_text.substr(_name_at, _name_length); }
+			String GetValue() const { return _XML->_text.substr(_value_at, _value_length); }
+			Attribute GetNextAttribute() const { return GetNode().GetAttribute(_index_in_node + 1); }
 
 		private:
-			const Node& get_node() const { return _XML->get_node(_node_ID); }
+			const Node& GetNode() const { return _XML->GetNode(_node_ID); }
 			const XML* _XML = nullptr;
 		};
 		struct Node
@@ -2097,34 +2095,32 @@ namespace SimpleRenderer
 
 			//String _debug_name;
 
-			bool is_valid() const { return _name_length > 0; }
-			String get_name() const { return _XML->_text.substr(_name_at, _name_length); }
-			const Attribute& get_attribute(const size_t index) const { return _XML->get_attribute((index >= _attribute_IDs.size() ? INVALID_ID : _attribute_IDs[index])); }
-			const Node& get_child_node(const size_t index) const { return _XML->get_node((index >= _child_node_IDs.size() ? INVALID_ID : _child_node_IDs[index])); }
-			const Node& get_next_sibling() const { return _XML->get_node(_parent_ID).get_child_node(_index_in_parent_node + 1); }
-
+			bool IsValid() const { return _name_length > 0; }
+			String GetName() const { return _XML->_text.substr(_name_at, _name_length); }
+			const Attribute& GetAttribute(const size_t index) const { return _XML->GetAttribute((index >= _attribute_IDs.size() ? INVALID_ID : _attribute_IDs[index])); }
+			const Node& GetChildNode(const size_t index) const { return _XML->GetNode((index >= _child_node_IDs.size() ? INVALID_ID : _child_node_IDs[index])); }
+			const Node& GetNextSiblingNode() const { return _XML->GetNode(_parent_ID).GetChildNode(_index_in_parent_node + 1); }
 		private:
-			bool has_name() const { return _name_length > 0; }
+			bool HasName() const { return _name_length > 0; }
 			const XML* _XML = nullptr;
 		};
-		bool parse(const String& text)
+		bool Parse(const String& text)
 		{
 			_text = text;
-			if (check_validity() == false)
+			if (CheckValidity() == false)
 			{
 				return false;
 			}
 
 			_at = 0;
 			_line = 1;
-			return parse_node(INVALID_ID);
+			return ParseNode(INVALID_ID);
 		}
-		const Node& get_root_node() const { return _nodes[0]; }
-		const Node& get_node(const size_t ID) const { return (ID >= _nodes.size() ? INVALID_NODE : _nodes[ID]); }
-		const Attribute& get_attribute(const size_t ID) const { return (ID >= _attributes.size() ? INVALID_ATTRIBUTE : _attributes[ID]); }
-
+		const Node& GetRootNode() const { return _nodes[0]; }
+		const Node& GetNode(const size_t ID) const { return (ID >= _nodes.size() ? INVALID_NODE : _nodes[ID]); }
+		const Attribute& GetAttribute(const size_t ID) const { return (ID >= _attributes.size() ? INVALID_ATTRIBUTE : _attributes[ID]); }
 	private:
-		bool advance_to_find(const char ch)
+		bool AdvanceToFind(const char ch)
 		{
 			const size_t length = _text.length();
 			while (_at < length && _text[_at] != ch)
@@ -2133,26 +2129,26 @@ namespace SimpleRenderer
 			}
 			return _text[_at] == ch;
 		}
-		bool parse_node(const size_t parent_node_ID)
+		bool ParseNode(const size_t parent_node_ID)
 		{
 			const size_t length = _text.length();
-			if (advance_to_find('<') == false)
+			if (AdvanceToFind('<') == false)
 			{
 				return (_at == length);
 			}
 
 			if (_at + 1 < length && _text[_at + 1] == '/')
 			{
-				if (advance_to_find('>') == false)
+				if (AdvanceToFind('>') == false)
 				{
 					return false;
 				}
 
-				return parse_node(_nodes[parent_node_ID]._parent_ID);
+				return ParseNode(_nodes[parent_node_ID]._parent_ID);
 			}
 
 			const size_t node_name_at = _at + 1;
-			if (advance_to_find('>') == false)
+			if (AdvanceToFind('>') == false)
 			{
 				return false;
 			}
@@ -2177,7 +2173,7 @@ namespace SimpleRenderer
 					continue;
 				}
 
-				if (_nodes[node_ID].has_name() == false)
+				if (_nodes[node_ID].HasName() == false)
 				{
 					_nodes[node_ID]._name_length = at - node_name_at;
 
@@ -2188,18 +2184,18 @@ namespace SimpleRenderer
 				{
 					// end
 					_at = at + 1;
-					return parse_node((is_open_close_node ? parent_node_ID : _nodes[node_ID]._ID));
+					return ParseNode((is_open_close_node ? parent_node_ID : _nodes[node_ID]._ID));
 				}
 				else
 				{
 					// attributes
 					_at = at + 1;
-					parse_attribute(_nodes[node_ID]);
+					ParseAttribute(_nodes[node_ID]);
 				}
 			}
 			return true;
 		}
-		bool parse_attribute(Node& node)
+		bool ParseAttribute(Node& node)
 		{
 			_attributes.push_back(Attribute());
 
@@ -2212,9 +2208,9 @@ namespace SimpleRenderer
 			attribute._node_ID = node._ID;
 			attribute._index_in_node = node._attribute_IDs.size() - 1;
 
-			if (advance_to_find('=') == false)
+			if (AdvanceToFind('=') == false)
 			{
-				report_error("invalid attribute! '=' is needed.");
+				ReportError("invalid attribute! '=' is needed.");
 				return false;
 			}
 
@@ -2223,15 +2219,15 @@ namespace SimpleRenderer
 
 			if (_text[_at + 1] != '\"')
 			{
-				report_error("'\"' must be followed by '='.");
+				ReportError("'\"' must be followed by '='.");
 				return false;
 			}
 			_at += 2;
 			attribute._value_at = _at;
 
-			if (advance_to_find('\"') == false)
+			if (AdvanceToFind('\"') == false)
 			{
-				report_error("closing '\"' is missing.");
+				ReportError("closing '\"' is missing.");
 				return false;
 			}
 			attribute._value_length = _at - attribute._value_at;
@@ -2240,7 +2236,7 @@ namespace SimpleRenderer
 		}
 
 	private:
-		bool check_validity() const
+		bool CheckValidity() const
 		{
 			constexpr size_t CMP_COUNT = 4;
 			const char cmps[CMP_COUNT] = { ' ', '<', '>', '/' };
@@ -2255,7 +2251,7 @@ namespace SimpleRenderer
 						if (at + 1 < length && _text[at + 1] == cmps[cmp_index])
 						{
 							message[10] = cmps[cmp_index];
-							report_error(message, at);
+							ReportError(message, at);
 							return false;
 						}
 					}
@@ -2263,9 +2259,9 @@ namespace SimpleRenderer
 			}
 			return true;
 		}
-		void report_error(const String& error) const { _error = error; __report_where(_at); }
-		void report_error(const String& error, const size_t at) const { _error = error; __report_where(at); }
-		void __report_where(const size_t at) const { _error += " at["; _error += toString(at); _error += "] line["; _error += toString(_line); _error += "]"; }
+		void ReportError(const String& error) const { _error = error; __ReportWhere(_at); }
+		void ReportError(const String& error, const size_t at) const { _error = error; __ReportWhere(at); }
+		void __ReportWhere(const size_t at) const { _error += " at["; _error += ToString(at); _error += "] line["; _error += ToString(_line); _error += "]"; }
 
 	private:
 		String _text;
@@ -2346,7 +2342,7 @@ namespace SimpleRenderer
 		using namespace SimpleRenderer;
 		constexpr uint2 kScreenSize = uint2(800, 600);
 		Window window;
-		if (window.create(Window::CreateDesc("SampleMain", kScreenSize)) == false)
+		if (window.Create(Window::CreateDesc("SampleMain", kScreenSize)) == false)
 		{
 			SR_LOG_ERROR("Failed to create window!");
 			return -1;
@@ -2354,22 +2350,21 @@ namespace SimpleRenderer
 
 		App app{ App(window, Color(0, 0.5f, 1, 1)) };
 		ShaderHeaderSet shaderHeaderSet;
-		shaderHeaderSet.push_shader_header("StreamData", kSampleShaderHeaderCode_StreamData);
+		shaderHeaderSet.PushShaderHeader("StreamData", kSampleShaderHeaderCode_StreamData);
 		Shader vertexShader;
-		app.get_RenderDevice().create_Shader(kSampleVertexShaderCode, ShaderType::VertexShader, "SampleVertexShader", "main", "vs_5_0", &shaderHeaderSet, vertexShader);
+		app.GetRenderDevice().CreateShader(kSampleVertexShaderCode, ShaderType::VertexShader, "SampleVertexShader", "main", "vs_5_0", &shaderHeaderSet, vertexShader);
 		vector<ShaderInputElement> shaderInputElements;
-		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("POSITION", 0));
-		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("COLOR", 0));
-		shaderInputElements.push_back(ShaderInputElement::create_InputElement_float2("TEXCOORD", 0));
+		shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float4("POSITION", 0));
+		shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float4("COLOR", 0));
+		shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float2("TEXCOORD", 0));
 		ShaderInputLayout shaderInputLayout;
-		app.get_RenderDevice().create_ShaderInputLayout(vertexShader, shaderInputElements, shaderInputLayout);
+		app.GetRenderDevice().CreateShaderInputLayout(vertexShader, shaderInputElements, shaderInputLayout);
 		Shader pixelShader;
-		app.get_RenderDevice().create_Shader(kSamplePixelShaderCode, ShaderType::PixelShader, "SamplePixelShader", "main", "ps_5_0", &shaderHeaderSet, pixelShader);
+		app.GetRenderDevice().CreateShader(kSamplePixelShaderCode, ShaderType::PixelShader, "SamplePixelShader", "main", "ps_5_0", &shaderHeaderSet, pixelShader);
 		Resource vscbMatrices;
 		SAMPLE_CB_MATRICES cb_matrices;
-		cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(kScreenSize);
-		app.get_RenderDevice().create_buffer(ResourceType::ConstantBuffer, &cb_matrices, sizeof(SAMPLE_CB_MATRICES), 1, vscbMatrices);
-
+		cb_matrices._projectionMatrix.MakePixelCoordsProjectionMatrix(kScreenSize);
+		app.GetRenderDevice().CreateBuffer(ResourceType::ConstantBuffer, &cb_matrices, sizeof(SAMPLE_CB_MATRICES), 1, vscbMatrices);
 		vector<SAMPLE_VS_INPUT> vertices;
 		vector<uint32> indices;
 		Resource vertexBuffer;
@@ -2377,29 +2372,29 @@ namespace SimpleRenderer
 		Resource indexBuffer;
 		indexBuffer._type = ResourceType::IndexBuffer;
 
-		while (app.is_running())
+		while (app.IsRunning())
 		{
-			app.begin_rendering();
+			app.BeginRendering();
 			{
 				vertices.clear();
 				indices.clear();
 
-				MeshGenerator<SAMPLE_VS_INPUT>::push_2D_circle(Color(1, 1, 0, 1), float2(100, 100), 32.0f, 16, vertices, indices);
-				app.get_RenderDevice().bind_ShaderInputLayout(shaderInputLayout);
-				app.get_RenderDevice().bind_Shader(vertexShader);
-				app.get_RenderDevice().bind_Shader(pixelShader);
-				app.get_RenderDevice().bind_ShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
-				app.get_RenderDevice().bind_input(vertexBuffer, 0);
-				app.get_RenderDevice().bind_input(indexBuffer, 0);
+				MeshGenerator<SAMPLE_VS_INPUT>::Push2DCircle(Color(1, 1, 0, 1), float2(100, 100), 32.0f, 16, vertices, indices);
+				app.GetRenderDevice().BindShaderInputLayout(shaderInputLayout);
+				app.GetRenderDevice().BindShader(vertexShader);
+				app.GetRenderDevice().BindShader(pixelShader);
+				app.GetRenderDevice().BindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
+				app.GetRenderDevice().BindInput(vertexBuffer, 0);
+				app.GetRenderDevice().BindInput(indexBuffer, 0);
 				if (vertices.empty() == false)
 				{
-					app.get_RenderDevice().update_resource(&vertices[0], sizeof(SAMPLE_VS_INPUT), (uint32)vertices.size(), vertexBuffer);
-					app.get_RenderDevice().update_resource(&indices[0], sizeof(uint32), (uint32)indices.size(), indexBuffer);
-					app.get_RenderDevice().draw_indexed((uint32)indices.size());
+					app.GetRenderDevice().UpdateShaderResource(&vertices[0], sizeof(SAMPLE_VS_INPUT), (uint32)vertices.size(), vertexBuffer);
+					app.GetRenderDevice().UpdateShaderResource(&indices[0], sizeof(uint32), (uint32)indices.size(), indexBuffer);
+					app.GetRenderDevice().DrawIndexed((uint32)indices.size());
 				}
-				app.draw_text(Color(1, 1, 1, 1), "Sample Window", float2(10, 10));
+				app.DrawTextAt(Color(1, 1, 1, 1), "Sample Window", float2(10, 10));
 			}
-			app.end_rendering();
+			app.EndRendering();
 		}
 		return 0;
 	}

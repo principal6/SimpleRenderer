@@ -68,38 +68,38 @@ namespace GJK
 	{
 		vector<float2> _points;
 		float2 _center;
-		float2 support(const float2& direction) const
+		float2 Support(const float2& direction) const
 		{
 			if (_points.empty())
 			{
 				return _center;
 			}
 
-			float max_dot = -1000.0f;
-			size_t support_index = 0;
+			float maxDotProduct = -1000.0f;
+			size_t supportIndex = 0;
 			for (size_t i = 0; i < _points.size(); i++)
 			{
-				const float dot = _points[i].dot(direction);
-				if (dot > max_dot)
+				const float dotProduct = _points[i].Dot(direction);
+				if (dotProduct > maxDotProduct)
 				{
-					max_dot = dot;
-					support_index = i;
+					maxDotProduct = dotProduct;
+					supportIndex = i;
 				}
 			}
-			return _center + _points[support_index];
+			return _center + _points[supportIndex];
 		}
-		void rotate(const float yaw)
+		void Rotate(const float yaw)
 		{
-			quaternion q = quaternion::make_from_axis_angle(float3(0, 0, -1), yaw);
+			quaternion q = quaternion::MakeByAxisAngle(float3(0, 0, -1), yaw);
 			float4 rotated;
 			for (size_t i = 0; i < _points.size(); i++)
 			{
-				rotated = q.rotate(float4(_points[i].x, _points[i].y, 0, 1));
+				rotated = q.Rotate(float4(_points[i].x, _points[i].y, 0, 1));
 				_points[i].x = rotated.x;
 				_points[i].y = rotated.y;
 			}
 		}
-		void draw_line_semgments_to(const Color& color, vector<VS_INPUT>& vertices, vector<uint32>& indices)
+		void DrawLineSegmentsTo(const Color& color, vector<VS_INPUT>& vertices, vector<uint32>& indices)
 		{
 			if (_points.size() <= 1)
 			{
@@ -109,10 +109,10 @@ namespace GJK
 			for (size_t iter = 0; iter < _points.size(); iter++)
 			{
 				const size_t prev = (iter == 0 ? _points.size() - 1 : iter - 1);
-				MeshGenerator<VS_INPUT>::push_2D_lineSegment(color, _center + _points[iter], _center + _points[prev], 2.0f, vertices, indices);
+				MeshGenerator<VS_INPUT>::Push2DLineSegment(color, _center + _points[iter], _center + _points[prev], 2.0f, vertices, indices);
 			}
 		}
-		void draw_points_to(const Color& color, vector<VS_INPUT>& vertices, vector<uint32>& indices)
+		void DrawPointsTo(const Color& color, vector<VS_INPUT>& vertices, vector<uint32>& indices)
 		{
 			if (_points.size() <= 1)
 			{
@@ -121,10 +121,10 @@ namespace GJK
 
 			for (size_t iter = 0; iter < _points.size(); iter++)
 			{
-				MeshGenerator<VS_INPUT>::push_2D_circle(color, _center + _points[iter], 3.0f, 8, vertices, indices);
+				MeshGenerator<VS_INPUT>::Push2DCircle(color, _center + _points[iter], 3.0f, 8, vertices, indices);
 			}
 		}
-		void make_Minkowski_difference_shape(const Shape2D& a, const Shape2D& b)
+		void MakeMinkowskiDifferenceShape(const Shape2D& a, const Shape2D& b)
 		{
 			_center = float2(0, 0);
 
@@ -136,18 +136,18 @@ namespace GJK
 					_points.push_back(a._points[i] - b._points[j]);
 				}
 			}
-			convexify_Graham_scan();
+			ConvexifyGrahamScan();
 		}
 
 	private:
-		void convexify_Graham_scan()
+		void ConvexifyGrahamScan()
 		{
 			if (_points.empty())
 			{
 				return;
 			}
 
-			convexify_Graham_scan_sort_points();
+			ConvexifyGrahamScanSortPoints();
 
 			vector<size_t> convex_point_indices;
 			convex_point_indices.push_back(0);
@@ -162,7 +162,7 @@ namespace GJK
 				const float2& a = _points[index_a];
 				const float3 cb = b - c;
 				const float3 ba = a - b;
-				const float3 ba_x_cb = ba.cross(cb);
+				const float3 ba_x_cb = ba.Cross(cb);
 				const bool is_counter_clockwise_or_straight = ba_x_cb.z >= 0.0f;
 				if (is_counter_clockwise_or_straight)
 				{
@@ -181,7 +181,7 @@ namespace GJK
 			}
 			_points = convex_points;
 		}
-		size_t convexify_Graham_scan_find_start_point() const
+		size_t ConvexifyGrahamScanFindStartPoint() const
 		{
 			float2 min = float2(10000.0f, -10000.0f);
 			size_t result = 0;
@@ -207,9 +207,9 @@ namespace GJK
 			}
 			return result;
 		}
-		void convexify_Graham_scan_sort_points()
+		void ConvexifyGrahamScanSortPoints()
 		{
-			const size_t startPointIndex = convexify_Graham_scan_find_start_point();
+			const size_t startPointIndex = ConvexifyGrahamScanFindStartPoint();
 			const float2& startPoint = _points[startPointIndex];
 			struct AngleIndex
 			{
@@ -244,30 +244,30 @@ namespace GJK
 	struct Simplex
 	{
 		Simplex() : _points{}, _validPointCount{ 0 } { __noop; }
-		Simplex(const float2& a) : Simplex() { append(a); }
-		Simplex(const float2& a, const float2& b) : Simplex() { append(b); append(a); }
-		void append(const float2& point) { _points[_validPointCount] = point; ++_validPointCount; }
-		const float2& a() const { return _points[_validPointCount - 1]; }
-		const float2& b() const { return _points[_validPointCount - 2]; }
-		const float2& c() const { return _points[_validPointCount - 3]; }
-		void draw_to(const Color& color, const Color& color_a, const float2& offset, vector<VS_INPUT>& vertices, vector<uint32>& indices)
+		Simplex(const float2& a) : Simplex() { Append(a); }
+		Simplex(const float2& a, const float2& b) : Simplex() { Append(b); Append(a); }
+		void Append(const float2& point) { _points[_validPointCount] = point; ++_validPointCount; }
+		const float2& A() const { return _points[_validPointCount - 1]; }
+		const float2& B() const { return _points[_validPointCount - 2]; }
+		const float2& C() const { return _points[_validPointCount - 3]; }
+		void DrawTo(const Color& color, const Color& color_a, const float2& offset, vector<VS_INPUT>& vertices, vector<uint32>& indices)
 		{
 			for (size_t i = 0; i < _validPointCount; i++)
 			{
 				const bool is_a = (i == _validPointCount - 1);
-				MeshGenerator<VS_INPUT>::push_2D_circle((is_a ? color_a : color), offset + _points[i], 4.0f, 8, vertices, indices);
+				MeshGenerator<VS_INPUT>::Push2DCircle((is_a ? color_a : color), offset + _points[i], 4.0f, 8, vertices, indices);
 
 				const size_t prev = (i == 0 ? _validPointCount - 1 : i - 1);
-				MeshGenerator<VS_INPUT>::push_2D_lineSegment(color, offset + _points[i], offset + _points[prev], 2.0f, vertices, indices);
+				MeshGenerator<VS_INPUT>::Push2DLineSegment(color, offset + _points[i], offset + _points[prev], 2.0f, vertices, indices);
 			}
 		}
-		const float2& get_closest_point_to_origin() const
+		const float2& GetClosestPointToOrigin() const
 		{
 			size_t min_index = 0;
 			float min_distance_sq = 99999.0f;
 			for (size_t i = 0; i < _validPointCount; i++)
 			{
-				const float distance_sq = _points[i].length_sq();
+				const float distance_sq = _points[i].LengthSq();
 				if (distance_sq < min_distance_sq)
 				{
 					min_distance_sq = distance_sq;
@@ -280,103 +280,103 @@ namespace GJK
 		size_t _validPointCount = 0;
 	};
 
-	inline bool passes_origin(const float2& point, const float2& direction)
+	inline bool PassesOrigin(const float2& point, const float2& direction)
 	{
-		return point.dot(direction) > 0.0f;
+		return point.Dot(direction) > 0.0f;
 	}
-	inline float2 support(const Shape2D& shape_a, const Shape2D& shape_b, const float2& direction)
+	inline float2 Support(const Shape2D& shape_a, const Shape2D& shape_b, const float2& direction)
 	{
-		return shape_a.support(direction) - shape_b.support(-direction);
+		return shape_a.Support(direction) - shape_b.Support(-direction);
 	}
-	inline bool intersects_simplex(const Shape2D& shape_a, const Shape2D& shape_b, Simplex& simplex, float2& direction)
+	inline bool IntersectsSimplex(const Shape2D& shape_a, const Shape2D& shape_b, Simplex& simplex, float2& direction)
 	{
 		if (simplex._validPointCount == 2)
 		{
 			// 1-simplex: line segment
-			const float2& a = simplex.a();
-			const float2& b = simplex.b();
+			const float2& a = simplex.A();
+			const float2& b = simplex.B();
 			const float3 ao = -a;
 			const float3 ab = b - a;
-			const float3 ab_x_ao = ab.cross(ao);
-			if (ab_x_ao.length_sq() == 0.0f)
+			const float3 ab_x_ao = ab.Cross(ao);
+			if (ab_x_ao.LengthSq() == 0.0f)
 			{
 				simplex = Simplex(a);
 				direction = ao;
 				return false;
 			}
-			direction = ab_x_ao.cross(ab);
-			direction.normalize();
+			direction = ab_x_ao.Cross(ab);
+			direction.Normalize();
 			return false;
 		}
 		else
 		{
 			// 2-simplex: triangle
-			const float2& a = simplex.a();
-			const float2& b = simplex.b();
-			const float2& c = simplex.c();
+			const float2& a = simplex.A();
+			const float2& b = simplex.B();
+			const float2& c = simplex.C();
 			const float3 ao = -a;
 			const float3 ab = b - a;
 			const float3 ac = c - a;
-			const float3 ab_x_ac = ab.cross(ac);
+			const float3 ab_x_ac = ab.Cross(ac);
 
 			// edge AB
-			float3 n = ab.cross(ab_x_ac);
-			n.normalize();
-			if (n.dot(ao) > 0.0f)
+			float3 n = ab.Cross(ab_x_ac);
+			n.Normalize();
+			if (n.Dot(ao) > 0.0f)
 			{
-				const float l = ab.length();
-				const float proj = ab.dot(ao) / l;
+				const float l = ab.Length();
+				const float proj = ab.Dot(ao) / l;
 				if (proj >= l)
 				{
 					// B
 					const float2 bo = -b;
 					direction = bo;
-					direction.normalize();
+					direction.Normalize();
 					simplex = Simplex(b);
 				}
 				//else if (proj < 0.0f)
 				//{
 				//    // A
 				//    direction = ao;
-				//    direction.normalize();
+				//    direction.Normalize();
 				//    simplex = Simplex(a);
 				//}
 				else
 				{
 					// AB
 					direction = n;
-					direction.normalize();
+					direction.Normalize();
 					simplex = Simplex(a, b);
 				}
 				return false;
 			}
 
 			// edge AC
-			n = ab_x_ac.cross(ac);
-			if (n.dot(ao) > 0.0f)
+			n = ab_x_ac.Cross(ac);
+			if (n.Dot(ao) > 0.0f)
 			{
-				const float l = ac.length();
-				const float proj = ac.dot(ao) / l;
+				const float l = ac.Length();
+				const float proj = ac.Dot(ao) / l;
 				if (proj >= l)
 				{
 					// C
 					const float2 co = -c;
 					direction = co;
-					direction.normalize();
+					direction.Normalize();
 					simplex = Simplex(c);
 				}
 				//else if (proj < 0.0f)
 				//{
 				//    // A
 				//    direction = ao;
-				//    direction.normalize();
+				//    direction.Normalize();
 				//    simplex = Simplex(a);
 				//}
 				else
 				{
 					// AC
 					direction = n;
-					direction.normalize();
+					direction.Normalize();
 					simplex = Simplex(a, c);
 				}
 				return false;
@@ -391,19 +391,19 @@ namespace GJK
 		Simplex _simplex;
 		float2 _direction;
 	};
-	bool intersects(const Shape2D& shape_a, const Shape2D& shape_b, const float2& initialDirection, DebugData* const outDebugData = nullptr)
+	bool Intersects(const Shape2D& shape_a, const Shape2D& shape_b, const float2& initialDirection, DebugData* const outDebugData = nullptr)
 	{
 		size_t step = 0;
 		bool result = false;
 		Simplex simplex;
 		float2 direction = initialDirection;
-		float2 Minkowski_support = support(shape_a, shape_b, direction);
-		simplex.append(Minkowski_support);
+		float2 Minkowski_support = Support(shape_a, shape_b, direction);
+		simplex.Append(Minkowski_support);
 		float2 prev_direction = direction;
 		if (step < g_max_step)
 		{
 			direction = -Minkowski_support;
-			direction.normalize();
+			direction.Normalize();
 			while (true)
 			{
 				if (step >= g_max_step)
@@ -412,16 +412,16 @@ namespace GJK
 				}
 
 				prev_direction = direction;
-				Minkowski_support = support(shape_a, shape_b, direction);
-				if (passes_origin(Minkowski_support, direction) == false)
+				Minkowski_support = Support(shape_a, shape_b, direction);
+				if (PassesOrigin(Minkowski_support, direction) == false)
 				{
 					result = false;
 					break;
 				}
 
-				simplex.append(Minkowski_support);
+				simplex.Append(Minkowski_support);
 
-				if (intersects_simplex(shape_a, shape_b, simplex, direction) == true)
+				if (IntersectsSimplex(shape_a, shape_b, simplex, direction) == true)
 				{
 					result = true;
 					break;
@@ -444,7 +444,7 @@ int main()
 	using namespace SimpleRenderer;
 	constexpr uint2 kScreenSize = uint2(800, 600);
 	Window window;
-	if (window.create(Window::CreateDesc("SampleMain", kScreenSize)) == false)
+	if (window.Create(Window::CreateDesc("SampleMain", kScreenSize)) == false)
 	{
 		SR_LOG_ERROR("Failed to create window!");
 		return -1;
@@ -452,26 +452,26 @@ int main()
 	App app{ App(window, Color(0, 0.5f, 1, 1)) };
 
 	ShaderHeaderSet shaderHeaderSet;
-	shaderHeaderSet.push_shader_header("StreamData", kShaderHeaderCode_StreamData);
+	shaderHeaderSet.PushShaderHeader("StreamData", kShaderHeaderCode_StreamData);
 
 	Shader vertexShader0;
-	app.get_RenderDevice().create_Shader(kVertexShaderCode, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderSet, vertexShader0);
+	app.GetRenderDevice().CreateShader(kVertexShaderCode, ShaderType::VertexShader, "VertexShader0", "main", "vs_5_0", &shaderHeaderSet, vertexShader0);
 
 	vector<ShaderInputElement> shaderInputElements;
-	shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("POSITION", 0));
-	shaderInputElements.push_back(ShaderInputElement::create_InputElement_float4("COLOR", 0));
-	shaderInputElements.push_back(ShaderInputElement::create_InputElement_float2("TEXCOORD", 0));
+	shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float4("POSITION", 0));
+	shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float4("COLOR", 0));
+	shaderInputElements.push_back(ShaderInputElement::CreateInputelement_float2("TEXCOORD", 0));
 	ShaderInputLayout shaderInputLayout;
-	app.get_RenderDevice().create_ShaderInputLayout(vertexShader0, shaderInputElements, shaderInputLayout);
+	app.GetRenderDevice().CreateShaderInputLayout(vertexShader0, shaderInputElements, shaderInputLayout);
 
 	Shader pixelShader0;
-	app.get_RenderDevice().create_Shader(kPixelShaderCode, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderSet, pixelShader0);
+	app.GetRenderDevice().CreateShader(kPixelShaderCode, ShaderType::PixelShader, "PixelShader0", "main", "ps_5_0", &shaderHeaderSet, pixelShader0);
 
 	Resource vscbMatrices;
 	CB_MATRICES cb_matrices;
-	cb_matrices._projectionMatrix.make_pixel_coordinates_projection_matrix(kScreenSize);
-	//cb_matrices._projectionMatrix.make_perspective_projection_matrix(kPi * 0.25f, 0.001f, 1000.0f, kScreenSize.x / kScreenSize.y);
-	app.get_RenderDevice().create_buffer(ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1, vscbMatrices);
+	cb_matrices._projectionMatrix.MakePixelCoordsProjectionMatrix(kScreenSize);
+	//cb_matrices._projectionMatrix.MakePerspectiveProjectionMatrix(kPi * 0.25f, 0.001f, 1000.0f, kScreenSize.x / kScreenSize.y);
+	app.GetRenderDevice().CreateBuffer(ResourceType::ConstantBuffer, &cb_matrices, sizeof(CB_MATRICES), 1, vscbMatrices);
 
 	bool is_shapes_loaded = false;
 	float2 positions_source[2]{};
@@ -498,40 +498,40 @@ int main()
 	const Color blue_color = Color(0, 0, 1, 1);
 	const Color magenta_color = Color(1, 0, 1, 1);
 	const float2 minkowski_shape_offset = float2(kScreenSize) * 0.5f + float2(100, 100);
-	while (app.is_running())
+	while (app.IsRunning())
 	{
-		if (app.get_keyboard_char() == 'w')
+		if (app.GetKeyboardChar() == 'w')
 		{
 			++GJK::g_max_step;
 		}
-		else if (app.get_keyboard_char() == 'q')
+		else if (app.GetKeyboardChar() == 'q')
 		{
 			if (GJK::g_max_step > 0)
 			{
 				--GJK::g_max_step;
 			}
 		}
-		else if (app.get_keyboard_char() == 'e')
+		else if (app.GetKeyboardChar() == 'e')
 		{
 			mode = 0;
 		}
-		else if (app.get_keyboard_char() == 'r')
+		else if (app.GetKeyboardChar() == 'r')
 		{
 			mode = 1;
 		}
-		else if (app.get_keyboard_char() == '1')
+		else if (app.GetKeyboardChar() == '1')
 		{
 			selection = 0;
 		}
-		else if (app.get_keyboard_char() == '2')
+		else if (app.GetKeyboardChar() == '2')
 		{
 			selection = 1;
 		}
-		else if (app.get_keyboard_char() == '3')
+		else if (app.GetKeyboardChar() == '3')
 		{
 			selection = 2;
 		}
-		else if (app.get_keyboard_char() == '0')
+		else if (app.GetKeyboardChar() == '0')
 		{
 			if (mode == 0)
 			{
@@ -546,41 +546,41 @@ int main()
 			}
 		}
 
-		if (app.get_keyboard_up_key() == Window::Key::Enter || is_shapes_loaded == false)
+		if (app.GetKeyboardUpKey() == Window::Key::Enter || is_shapes_loaded == false)
 		{
 			String shapes_content;
-			read_file("shapes.txt", shapes_content);
+			ReadFile("shapes.txt", shapes_content);
 
 			XML xml;
-			if (xml.parse(shapes_content) == true)
+			if (xml.Parse(shapes_content) == true)
 			{
 				uint32 shape_index = 0;
-				const XML::Node& root_node = xml.get_root_node();
+				const XML::Node& root_node = xml.GetRootNode();
 				for (const auto& root_child_node_ID : root_node._child_node_IDs)
 				{
-					const XML::Node& shape_node = xml.get_node(root_child_node_ID);
+					const XML::Node& shape_node = xml.GetNode(root_child_node_ID);
 					for (const auto& shape_child_node_ID : shape_node._child_node_IDs)
 					{
-						const XML::Node& shape_child_node = xml.get_node(shape_child_node_ID);
-						if (shape_child_node.get_name() == "center")
+						const XML::Node& shape_child_node = xml.GetNode(shape_child_node_ID);
+						if (shape_child_node.GetName() == "center")
 						{
-							XML::Attribute attribute = shape_child_node.get_attribute(0);
-							const float x = std::stof(attribute.get_value());
-							attribute = attribute.get_next_attribute();
-							const float y = std::stof(attribute.get_value());
+							XML::Attribute attribute = shape_child_node.GetAttribute(0);
+							const float x = std::stof(attribute.GetValue());
+							attribute = attribute.GetNextAttribute();
+							const float y = std::stof(attribute.GetValue());
 
 							positions_source[shape_index] = float2(x, y);
 						}
-						else if (shape_child_node.get_name() == "points")
+						else if (shape_child_node.GetName() == "points")
 						{
 							shape_sources[shape_index]._points.clear();
 
-							for (XML::Node point_node = shape_child_node.get_child_node(0); point_node.is_valid(); point_node = point_node.get_next_sibling())
+							for (XML::Node point_node = shape_child_node.GetChildNode(0); point_node.IsValid(); point_node = point_node.GetNextSiblingNode())
 							{
-								XML::Attribute attribute = point_node.get_attribute(0);
-								const float x = std::stof(attribute.get_value());
-								attribute = attribute.get_next_attribute();
-								const float y = std::stof(attribute.get_value());
+								XML::Attribute attribute = point_node.GetAttribute(0);
+								const float x = std::stof(attribute.GetValue());
+								attribute = attribute.GetNextAttribute();
+								const float y = std::stof(attribute.GetValue());
 
 								shape_sources[shape_index]._points.push_back(float2(x, y));
 							}
@@ -603,7 +603,7 @@ int main()
 			is_shapes_loaded = true;
 		}
 
-		if (app.is_mouse_L_button_pressed())
+		if (app.IsMouseLButtonPressed())
 		{
 			if (mode == 0)
 			{
@@ -617,19 +617,19 @@ int main()
 				thetas_prev[selection] = thetas[selection];
 			}
 		}
-		if (app.is_mouse_L_button_down())
+		if (app.IsMouseLButtonDown())
 		{
 			if (mode == 0)
 			{
 				if (selection <= 1)
 				{
-					positions[selection].x = positions_prev[selection].x + app.get_mouse_move_delta().x;
-					positions[selection].y = positions_prev[selection].y + app.get_mouse_move_delta().y;
+					positions[selection].x = positions_prev[selection].x + app.GetMouseMoveDelta().x;
+					positions[selection].y = positions_prev[selection].y + app.GetMouseMoveDelta().y;
 				}
 			}
 			else
 			{
-				const float theta = (app.get_mouse_move_delta().x + app.get_mouse_move_delta().y) * 0.03125f;
+				const float theta = (app.GetMouseMoveDelta().x + app.GetMouseMoveDelta().y) * 0.03125f;
 				thetas[selection] = thetas_prev[selection] + theta;
 			}
 		}
@@ -640,90 +640,89 @@ int main()
 			shapes[selection]._center = shape_sources[selection]._center;
 
 			shapes[selection] = shape_sources[selection];
-			shapes[selection].rotate(thetas[selection]);
+			shapes[selection].Rotate(thetas[selection]);
 		}
 		else
 		{
-			const quaternion rotation = quaternion::make_from_axis_angle(float3(0, 0, -1), thetas[selection]);
-			initial_direction = rotation.rotate(float2(1, 0));
+			const quaternion rotation = quaternion::MakeByAxisAngle(float3(0, 0, -1), thetas[selection]);
+			initial_direction = rotation.Rotate(float2(1, 0));
 		}
 
 		const float2 minkowski_shape_center_in_minkowski_space = shapes[0]._center - shapes[1]._center;
 		const float2 minkowski_space_origin = float2(kScreenSize) * 0.5f + float2(0, 120);
-		shape_Minkowski.make_Minkowski_difference_shape(shapes[0], shapes[1]);
+		shape_Minkowski.MakeMinkowskiDifferenceShape(shapes[0], shapes[1]);
 		shape_Minkowski._center = minkowski_space_origin + minkowski_shape_center_in_minkowski_space;
 
-		app.begin_rendering();
+		app.BeginRendering();
 		{
 			{
 				vertices.clear();
 				indices.clear();
 
 				GJK::DebugData debugData;
-				const bool intersected = GJK::intersects(shapes[0], shapes[1], initial_direction, &debugData);
+				const bool intersected = GJK::Intersects(shapes[0], shapes[1], initial_direction, &debugData);
 
 				const Color shape_color = (intersected ? Color(0, 1, 0, 1) : white_color);
-				MeshGenerator<VS_INPUT>::push_2D_circle(white_color, shapes[0]._center, 4.0f, 8, vertices, indices);
-				MeshGenerator<VS_INPUT>::push_2D_circle(white_color, shapes[1]._center, 4.0f, 8, vertices, indices);
-				shapes[0].draw_points_to(shape_color, vertices, indices);
-				shapes[0].draw_line_semgments_to(shape_color, vertices, indices);
-				shapes[1].draw_points_to(shape_color, vertices, indices);
-				shapes[1].draw_line_semgments_to(shape_color, vertices, indices);
+				MeshGenerator<VS_INPUT>::Push2DCircle(white_color, shapes[0]._center, 4.0f, 8, vertices, indices);
+				MeshGenerator<VS_INPUT>::Push2DCircle(white_color, shapes[1]._center, 4.0f, 8, vertices, indices);
+				shapes[0].DrawPointsTo(shape_color, vertices, indices);
+				shapes[0].DrawLineSegmentsTo(shape_color, vertices, indices);
+				shapes[1].DrawPointsTo(shape_color, vertices, indices);
+				shapes[1].DrawLineSegmentsTo(shape_color, vertices, indices);
 
-				shape_Minkowski.draw_points_to(dark_gray_color, vertices, indices);
-				shape_Minkowski.draw_line_semgments_to(dark_gray_color, vertices, indices);
-				MeshGenerator<VS_INPUT>::push_2D_circle(Color(0.5f, 1.0f, 0.25f, 1.0f), minkowski_space_origin + debugData._simplex.get_closest_point_to_origin(), 8.0f, 8, vertices, indices);
+				shape_Minkowski.DrawPointsTo(dark_gray_color, vertices, indices);
+				shape_Minkowski.DrawLineSegmentsTo(dark_gray_color, vertices, indices);
+				MeshGenerator<VS_INPUT>::Push2DCircle(Color(0.5f, 1.0f, 0.25f, 1.0f), minkowski_space_origin + debugData._simplex.GetClosestPointToOrigin(), 8.0f, 8, vertices, indices);
 
 				{
 					const Color color_latest = Color(0.5f, 0, 1, 1);
 					const Color color_shape_a = orange_color;
 					const Color color_shape_b = blue_color;
-					const float2& support_a = shapes[0].support(debugData._direction);
-					const float2& support_b = shapes[1].support(-debugData._direction);
-					MeshGenerator<VS_INPUT>::push_2D_circle(color_latest, support_a, 4.0f, 8, vertices, indices);
-					MeshGenerator<VS_INPUT>::push_2D_circle(color_latest, support_b, 4.0f, 8, vertices, indices);
-					MeshGenerator<VS_INPUT>::push_2D_arrow(color_shape_a, shapes[0]._center, support_a, 2.0f, 0.125f, 2.0f, vertices, indices);
-					MeshGenerator<VS_INPUT>::push_2D_arrow(color_shape_b, shapes[1]._center, support_b, 2.0f, 0.125f, 2.0f, vertices, indices);
-					MeshGenerator<VS_INPUT>::push_2D_arrow(color_latest, shapes[0]._center, shapes[0]._center + debugData._direction * 32.0f, 2.0f, 0.25f, 3.0f, vertices, indices);
-					MeshGenerator<VS_INPUT>::push_2D_arrow(color_latest, shapes[1]._center, shapes[1]._center - debugData._direction * 32.0f, 2.0f, 0.25f, 3.0f, vertices, indices);
+					const float2& support_a = shapes[0].Support(debugData._direction);
+					const float2& support_b = shapes[1].Support(-debugData._direction);
+					MeshGenerator<VS_INPUT>::Push2DCircle(color_latest, support_a, 4.0f, 8, vertices, indices);
+					MeshGenerator<VS_INPUT>::Push2DCircle(color_latest, support_b, 4.0f, 8, vertices, indices);
+					MeshGenerator<VS_INPUT>::Push2DArrow(color_shape_a, shapes[0]._center, support_a, 2.0f, 0.125f, 2.0f, vertices, indices);
+					MeshGenerator<VS_INPUT>::Push2DArrow(color_shape_b, shapes[1]._center, support_b, 2.0f, 0.125f, 2.0f, vertices, indices);
+					MeshGenerator<VS_INPUT>::Push2DArrow(color_latest, shapes[0]._center, shapes[0]._center + debugData._direction * 32.0f, 2.0f, 0.25f, 3.0f, vertices, indices);
+					MeshGenerator<VS_INPUT>::Push2DArrow(color_latest, shapes[1]._center, shapes[1]._center - debugData._direction * 32.0f, 2.0f, 0.25f, 3.0f, vertices, indices);
 
 					const float2 support_a_from_o = support_a - shapes[0]._center;
 					const float2 support_b_from_o = shapes[1]._center - support_b;
-					debugData._simplex.draw_to(magenta_color, color_latest, minkowski_space_origin, vertices, indices);
-					MeshGenerator<VS_INPUT>::push_2D_circle(white_color, shape_Minkowski._center, 4.0f, 8, vertices, indices);
-					MeshGenerator<VS_INPUT>::push_2D_arrow(color_shape_a, shape_Minkowski._center, shape_Minkowski._center + support_a_from_o, 2.0f, 0.125f, 2.0f, vertices, indices);
-					MeshGenerator<VS_INPUT>::push_2D_arrow(color_shape_b, shape_Minkowski._center + support_a_from_o, shape_Minkowski._center + support_a_from_o + support_b_from_o, 2.0f, 0.125f, 2.0f, vertices, indices);
-					MeshGenerator<VS_INPUT>::push_2D_arrow(color_latest, shape_Minkowski._center, shape_Minkowski._center + debugData._direction * 32.0f, 2.0f, 0.25f, 3.0f, vertices, indices);
+					debugData._simplex.DrawTo(magenta_color, color_latest, minkowski_space_origin, vertices, indices);
+					MeshGenerator<VS_INPUT>::Push2DCircle(white_color, shape_Minkowski._center, 4.0f, 8, vertices, indices);
+					MeshGenerator<VS_INPUT>::Push2DArrow(color_shape_a, shape_Minkowski._center, shape_Minkowski._center + support_a_from_o, 2.0f, 0.125f, 2.0f, vertices, indices);
+					MeshGenerator<VS_INPUT>::Push2DArrow(color_shape_b, shape_Minkowski._center + support_a_from_o, shape_Minkowski._center + support_a_from_o + support_b_from_o, 2.0f, 0.125f, 2.0f, vertices, indices);
+					MeshGenerator<VS_INPUT>::Push2DArrow(color_latest, shape_Minkowski._center, shape_Minkowski._center + debugData._direction * 32.0f, 2.0f, 0.25f, 3.0f, vertices, indices);
 
-					MeshGenerator<VS_INPUT>::push_2D_arrow(white_color, minkowski_space_origin - float2(200, 0), minkowski_space_origin + float2(200, 0), 1.0f, 0.0625f, 4.0f, vertices, indices);
-					MeshGenerator<VS_INPUT>::push_2D_arrow(white_color, minkowski_space_origin + float2(0, 200), minkowski_space_origin - float2(0, 200), 1.0f, 0.0625f, 4.0f, vertices, indices);
+					MeshGenerator<VS_INPUT>::Push2DArrow(white_color, minkowski_space_origin - float2(200, 0), minkowski_space_origin + float2(200, 0), 1.0f, 0.0625f, 4.0f, vertices, indices);
+					MeshGenerator<VS_INPUT>::Push2DArrow(white_color, minkowski_space_origin + float2(0, 200), minkowski_space_origin - float2(0, 200), 1.0f, 0.0625f, 4.0f, vertices, indices);
 				}
 
-				app.get_RenderDevice().update_resource(&vertices[0], sizeof(VS_INPUT), (uint32)vertices.size(), vertexBuffer);
-				app.get_RenderDevice().update_resource(&indices[0], sizeof(uint32), (uint32)indices.size(), indexBuffer);
+				app.GetRenderDevice().UpdateShaderResource(&vertices[0], sizeof(VS_INPUT), (uint32)vertices.size(), vertexBuffer);
+				app.GetRenderDevice().UpdateShaderResource(&indices[0], sizeof(uint32), (uint32)indices.size(), indexBuffer);
 			}
 
-			app.get_RenderDevice().bind_Shader(vertexShader0);
-			app.get_RenderDevice().bind_ShaderInputLayout(shaderInputLayout);
-			app.get_RenderDevice().bind_Shader(pixelShader0);
-			app.get_RenderDevice().bind_input(vertexBuffer, 0);
-			app.get_RenderDevice().bind_input(indexBuffer, 0);
-			app.get_RenderDevice().bind_ShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
-			app.get_RenderDevice().draw_indexed((uint32)indices.size());
+			app.GetRenderDevice().BindShader(vertexShader0);
+			app.GetRenderDevice().BindShaderInputLayout(shaderInputLayout);
+			app.GetRenderDevice().BindShader(pixelShader0);
+			app.GetRenderDevice().BindInput(vertexBuffer, 0);
+			app.GetRenderDevice().BindInput(indexBuffer, 0);
+			app.GetRenderDevice().BindShaderResource(ShaderType::VertexShader, vscbMatrices, 0);
+			app.GetRenderDevice().DrawIndexed((uint32)indices.size());
 
-			app.draw_text(Color(0, 1, 1, 1), "GJK Algorithm Test", float2(10, 10));
-			app.draw_text((selection == 0 ? yellow_color : white_color), "1: shape A", float2(10, 40));
-			app.draw_text((selection == 1 ? yellow_color : white_color), "2: shape B", float2(10, 60));
-			app.draw_text((selection == 2 ? yellow_color : white_color), "3: initial direction", float2(10, 80));
-			app.draw_text((selection == 2 ? yellow_color : white_color), "0: reset", float2(10, 100));
+			app.DrawTextAt(Color(0, 1, 1, 1), "GJK Algorithm Test", float2(10, 10));
+			app.DrawTextAt((selection == 0 ? yellow_color : white_color), "1: shape A", float2(10, 40));
+			app.DrawTextAt((selection == 1 ? yellow_color : white_color), "2: shape B", float2(10, 60));
+			app.DrawTextAt((selection == 2 ? yellow_color : white_color), "3: initial direction", float2(10, 80));
+			app.DrawTextAt((selection == 2 ? yellow_color : white_color), "0: reset", float2(10, 100));
+			app.DrawTextAt((mode == 0 ? yellow_color : white_color), "e: translate", float2(10, 140));
+			app.DrawTextAt((mode == 1 ? yellow_color : white_color), "r: Rotate", float2(10, 160));
+			app.DrawTextAt(white_color, "current gjk_max_step: " + ToString(GJK::g_max_step), float2(10, 180));
+			app.DrawTextAt(white_color, "q: --gjk_max_step", float2(10, 200));
+			app.DrawTextAt(white_color, "w: ++gjk_max_step", float2(10, 220));
 
-			app.draw_text((mode == 0 ? yellow_color : white_color), "e: translate", float2(10, 140));
-			app.draw_text((mode == 1 ? yellow_color : white_color), "r: rotate", float2(10, 160));
-			app.draw_text(white_color, "current gjk_max_step: " + toString(GJK::g_max_step), float2(10, 180));
-			app.draw_text(white_color, "q: --gjk_max_step", float2(10, 200));
-			app.draw_text(white_color, "w: ++gjk_max_step", float2(10, 220));
-
-			app.draw_text(white_color, "ENTER: load shapes from file", float2(10, 260));
+			app.DrawTextAt(white_color, "ENTER: load shapes from file", float2(10, 260));
 
 			//char buffer[8]{};
 			//for (size_t i = 0; i < shapeMinkowski._points.size(); ++i)
@@ -733,7 +732,7 @@ int main()
 			//    app.draw_text(buffer, shapeMinkowski._center + point);
 			//}
 		}
-		app.end_rendering();
+		app.EndRendering();
 	}
 	return 0;
 }
