@@ -484,9 +484,9 @@ int main()
 	GJK::Shape2D shapes[2];
 	GJK::Shape2D shape_Minkowski;
 	Resource vertexBuffer;
-	vertexBuffer._type = ResourceType::VertexBuffer;
 	Resource indexBuffer;
-	indexBuffer._type = ResourceType::IndexBuffer;
+	renderDevice.CreateBuffer(ResourceType::VertexBuffer, nullptr, sizeof(VS_INPUT), 512, vertexBuffer);
+	renderDevice.CreateBuffer(ResourceType::IndexBuffer, nullptr, sizeof(uint32), 1024, indexBuffer);
 	vector<VS_INPUT> vertices;
 	vector<uint32> indices;
 	uint32 mode = 0;

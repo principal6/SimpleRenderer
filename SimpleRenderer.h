@@ -27,6 +27,7 @@
 
 namespace SimpleRenderer
 {
+#define SR_LOG_INFO(content) { std::cout << content; }
 #define SR_LOG_ERROR(content) { std::cout << content; ::DebugBreak(); }
 #define SR_ASSERT(condition, content) if (!(condition)) { SR_LOG_ERROR(content); }
 #define SR_STATIC_ASSERT(condition, content) static_assert(condition, content)
@@ -545,6 +546,16 @@ namespace SimpleRenderer
 	};
 
 	using Color = float4;
+	constexpr Color kWhiteColor = Color(1, 1, 1, 1);
+	constexpr Color kRedColor = Color(1, 0, 0, 1);
+	constexpr Color kGreenColor = Color(0, 1, 0, 1);
+	constexpr Color kBlueColor = Color(0, 0, 1, 1);
+	constexpr Color kCyanColor = Color(0, 1, 1, 1);
+	constexpr Color kMagentaColor = Color(1, 0, 1, 1);
+	constexpr Color kYellowColor = Color(1, 1, 0, 1);
+	constexpr Color kOrangeColor = Color(1, 0.5f, 0, 1);
+	constexpr Color kDarkGrayColor = Color(0.25f, 0.25f, 0.25f, 1);
+	constexpr Color kBlackColor = Color(0, 0, 0, 1);
 #pragma endregion
 
 	enum class ShaderType
@@ -829,7 +840,7 @@ namespace SimpleRenderer
 	private:
 		static uint32 __ComputeElementStride(const TextureFormat& format);
 
-	public:
+	private:
 		ResourceType _type;
 		TextureFormat _format;
 		uint32 _byteSize;
@@ -1643,19 +1654,20 @@ namespace SimpleRenderer
 
 #if defined(SR_DIRECTX)
 		ComPtr<ID3D11Resource> newResource;
-		D3D11_BUFFER_DESC bufferDescriptor{};
-		bufferDescriptor.Usage = D3D11_USAGE::D3D11_USAGE_DYNAMIC;
-		bufferDescriptor.ByteWidth = elementStride * elementCount;
-		bufferDescriptor.BindFlags = D3D11_BIND_FLAG(1 << (uint32)type); // !!! CAUTION !!!
-		bufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::D3D11_CPU_ACCESS_WRITE;
-		bufferDescriptor.MiscFlags = 0;
-		bufferDescriptor.StructureByteStride = 0;
+		D3D11_BUFFER_DESC bufferDesc{};
+		bufferDesc.Usage = D3D11_USAGE::D3D11_USAGE_DYNAMIC;
+		bufferDesc.ByteWidth = elementStride * elementCount;
+		bufferDesc.BindFlags = D3D11_BIND_FLAG(1 << (uint32)type); // !!! CAUTION !!!
+		bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::D3D11_CPU_ACCESS_WRITE;
+		bufferDesc.MiscFlags = 0;
+		bufferDesc.StructureByteStride = 0;
 		D3D11_SUBRESOURCE_DATA subresourceData{};
 		subresourceData.pSysMem = content;
-		if (SUCCEEDED(_device->CreateBuffer(&bufferDescriptor, (content != nullptr) ? &subresourceData : nullptr, reinterpret_cast<ID3D11Buffer**>(newResource.ReleaseAndGetAddressOf()))))
+		const D3D11_SUBRESOURCE_DATA* const initialData{ (content != nullptr ? &subresourceData : nullptr) };
+		if (SUCCEEDED(_device->CreateBuffer(&bufferDesc, initialData, reinterpret_cast<ID3D11Buffer**>(newResource.ReleaseAndGetAddressOf()))))
 		{
 			resource._type = type;
-			resource._byteSize = bufferDescriptor.ByteWidth;
+			resource._byteSize = bufferDesc.ByteWidth;
 			resource._elementStride = elementStride;
 			resource._elementMaxCount = elementCount;
 
@@ -1663,6 +1675,7 @@ namespace SimpleRenderer
 			return true;
 		}
 #endif // defined(SR_DIRECTX)
+		SR_ASSERT(false, "Failed to CreateBuffer!!!");
 		return false;
 	}
 
@@ -1670,6 +1683,7 @@ namespace SimpleRenderer
 	{
 		if (elementCount > resource._elementMaxCount)
 		{
+			SR_LOG_INFO("Element count(" << elementCount << ") exceeded current max(" << resource._elementMaxCount << ")! Recreating the buffer( " << &resource << " )\n");
 			return CreateBuffer(resource._type, content, elementStride, elementCount, resource);
 		}
 
@@ -2370,9 +2384,9 @@ namespace SimpleRenderer
 		vector<SAMPLE_VS_INPUT> vertices;
 		vector<uint32> indices;
 		Resource vertexBuffer;
-		vertexBuffer._type = ResourceType::VertexBuffer;
 		Resource indexBuffer;
-		indexBuffer._type = ResourceType::IndexBuffer;
+		renderDevice.CreateBuffer(ResourceType::VertexBuffer, nullptr, sizeof(SAMPLE_VS_INPUT), 16, vertexBuffer);
+		renderDevice.CreateBuffer(ResourceType::IndexBuffer, nullptr, sizeof(uint32), 16, indexBuffer);
 
 		while (app.IsRunning())
 		{
